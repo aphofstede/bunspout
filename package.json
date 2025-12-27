@@ -5,8 +5,9 @@
   "scripts": {
     "test": "bun test",
     "bench": "for file in src/tests/benchmarks/*.bench.ts; do bun run \"$file\"; done",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint": "bun run typecheck && eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "buffer-crc32": "^1.0.0",
