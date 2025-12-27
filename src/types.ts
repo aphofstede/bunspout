@@ -21,6 +21,7 @@ export type Row = {
    */
   cells: (Cell | undefined | null)[];
   rowIndex?: number;
+  height?: number; // Row height in points
   // Future: styles?: Record<number, Style>;
 };
 

@@ -1,4 +1,4 @@
-import type { ColumnWidthDefinition, SheetColumnWidthOptions } from '@xlsx/types';
+import type { ColumnWidthDefinition, SheetColumnWidthOptions, RowHeightDefinition } from '@xlsx/types';
 import { ColumnWidthTracker } from '@utils/column-widths';
 import { escapeXml } from '@utils/xml';
 import type { Row, Cell } from '../types';
@@ -17,6 +17,41 @@ export interface WriteSheetXmlOptions {
    * Column width options for the sheet
    */
   columnWidths?: SheetColumnWidthOptions;
+  /**
+   * Default row height for all rows (in points)
+   */
+  defaultRowHeight?: number;
+  /**
+   * Row height definitions for specific rows/ranges
+   */
+  rowHeights?: RowHeightDefinition[];
+}
+
+/**
+ * Options for serializing a row to XML
+ */
+export interface SerializeRowOptions {
+  /**
+   * Function to get shared string index for a given string.
+   * If provided, strings will be stored in shared strings table.
+   */
+  getStringIndex?: (str: string) => number;
+  /**
+   * Column width tracker for auto-detecting column widths.
+   * If provided, cell widths will be tracked during serialization.
+   */
+  widthTracker?: ColumnWidthTracker;
+  /**
+   * Resolved row height in points.
+   * If provided, the row will include height attributes in the XML.
+   */
+  rowHeight?: number;
+  /**
+   * Row index to use for serialization.
+   * If provided, this overrides row.rowIndex.
+   * Used for auto-inferring row indices when row.rowIndex is undefined.
+   */
+  rowIndex?: number;
 }
 
 /**
@@ -83,14 +118,48 @@ export function serializeCell(
 }
 
 /**
+ * Resolves the height for a row based on row height definitions
+ * @param rowIndex - Row index (1-based)
+ * @param rowHeight - Direct height on the row (if set)
+ * @param rowHeights - Array of row height definitions
+ * @returns Resolved height or undefined
+ */
+function resolveRowHeight(
+  rowIndex: number,
+  rowHeight: number | undefined,
+  rowHeights: RowHeightDefinition[] | undefined,
+): number | undefined {
+  // Direct height on row takes priority
+  if (rowHeight !== undefined) {
+    return rowHeight;
+  }
+
+  // Check row height definitions
+  if (rowHeights) {
+    for (const def of rowHeights) {
+      if (def.rowIndex !== undefined && def.rowIndex === rowIndex) {
+        return def.height;
+      } else if (def.rowRange) {
+        const { from, to } = def.rowRange;
+        if (rowIndex >= from && rowIndex <= to) {
+          return def.height;
+        }
+      }
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Serializes a row to XML
  */
 export function serializeRow(
   row: Row,
-  getStringIndex?: (str: string) => number,
-  widthTracker?: ColumnWidthTracker,
+  options?: SerializeRowOptions,
 ): string {
-  const rowIndex = row.rowIndex ?? 1;
+  const { getStringIndex, widthTracker, rowHeight, rowIndex: inferredRowIndex } = options ?? {};
+  const rowIndex = inferredRowIndex ?? row.rowIndex ?? 1;
   const rowIndexAttr = ` r="${rowIndex}"`;
 
   // Calculate spans (first column to last column, 1-based)
@@ -108,6 +177,12 @@ export function serializeRow(
   }
   const spansAttr = ` spans="${firstCol}:${lastCol}"`;
 
+  // Add height attributes if height is specified
+  let heightAttrs = '';
+  if (rowHeight !== undefined) {
+    heightAttrs = ` ht="${rowHeight}" customHeight="1"`;
+  }
+
   const cellsXml = row.cells
     .map((cell, colIndex) => {
       // Skip undefined/null cells (holes in the row)
@@ -122,7 +197,7 @@ export function serializeRow(
     })
     .join('');
 
-  return `<row${rowIndexAttr}${spansAttr}>${cellsXml}</row>`;
+  return `<row${rowIndexAttr}${spansAttr}${heightAttrs}>${cellsXml}</row>`;
 }
 
 /**
@@ -215,13 +290,23 @@ function generateColsXml(
 }
 
 /**
- * Generates sheetFormatPr XML for default column width
+ * Generates sheetFormatPr XML for default column width and row height
  */
-function generateSheetFormatPr(defaultWidth: number | undefined): string {
-  if (defaultWidth === undefined) {
+function generateSheetFormatPr(
+  defaultWidth: number | undefined,
+  defaultRowHeight: number | undefined,
+): string {
+  const attrs: string[] = [];
+  if (defaultWidth !== undefined) {
+    attrs.push(`defaultColWidth="${defaultWidth}"`);
+  }
+  if (defaultRowHeight !== undefined) {
+    attrs.push(`defaultRowHeight="${defaultRowHeight}"`);
+  }
+  if (attrs.length === 0) {
     return '';
   }
-  return `    <sheetFormatPr defaultColWidth="${defaultWidth}"/>`;
+  return `    <sheetFormatPr ${attrs.join(' ')}/>`;
 }
 
 /**
@@ -247,6 +332,8 @@ export async function* writeSheetXml(
 
   const getStringIndex = options?.getStringIndex;
   const columnWidthOptions = options?.columnWidths;
+  const defaultRowHeight = options?.defaultRowHeight;
+  const rowHeights = options?.rowHeights;
 
   // Check if we need per-column width definitions (cols XML)
   // A global defaultColumnWidth only needs sheetFormatPr, not cols XML
@@ -263,14 +350,30 @@ export async function* writeSheetXml(
   // Fast path: no per-column overrides needed - stream directly
   // This covers both: no widths at all, and defaultColumnWidth only (which just needs sheetFormatPr)
   if (!needsColsXml) {
-    // Yield sheetFormatPr if we have a default width
-    if (columnWidthOptions?.defaultColumnWidth !== undefined) {
-      yield generateSheetFormatPr(columnWidthOptions.defaultColumnWidth);
+    // Yield sheetFormatPr if we have a default width or row height
+    if (columnWidthOptions?.defaultColumnWidth !== undefined || defaultRowHeight !== undefined) {
+      yield generateSheetFormatPr(columnWidthOptions?.defaultColumnWidth, defaultRowHeight);
     }
     yield '<sheetData>';
 
+    let currentRowNumber = 1;
     for await (const row of rows) {
-      yield serializeRow(row, getStringIndex, widthTracker);
+      // Auto-assign row index if not provided, based on order
+      const rowIndex = row.rowIndex ?? currentRowNumber;
+      const resolvedHeight = resolveRowHeight(rowIndex, row.height, rowHeights);
+      yield serializeRow(row, {
+        getStringIndex,
+        widthTracker,
+        rowHeight: resolvedHeight,
+        rowIndex,
+      });
+      // Increment for next row (only if rowIndex wasn't explicitly set)
+      if (row.rowIndex === undefined) {
+        currentRowNumber++;
+      } else {
+        // If explicit rowIndex is set, use it + 1 as next default (allows for gaps)
+        currentRowNumber = row.rowIndex + 1;
+      }
     }
 
     yield '</sheetData></worksheet>';
@@ -299,7 +402,7 @@ export async function* writeSheetXml(
   }
 
   // Generate column width XML if needed
-  const sheetFormatPr = generateSheetFormatPr(columnWidthOptions?.defaultColumnWidth);
+  const sheetFormatPr = generateSheetFormatPr(columnWidthOptions?.defaultColumnWidth, defaultRowHeight);
   // Only generate cols XML if we have per-column definitions or auto-detection
   // A global defaultColumnWidth alone doesn't need cols XML (only sheetFormatPr)
   const colsXml = needsColsXml
@@ -321,9 +424,25 @@ export async function* writeSheetXml(
 
   yield '<sheetData>';
 
-  // Yield all rows
+  // Yield all rows with auto-assigned row indices
+  let currentRowNumber = 1;
   for (const row of allRows) {
-    yield serializeRow(row, getStringIndex, widthTracker);
+    // Auto-assign row index if not provided, based on order
+    const rowIndex = row.rowIndex ?? currentRowNumber;
+    const resolvedHeight = resolveRowHeight(rowIndex, row.height, rowHeights);
+    yield serializeRow(row, {
+      getStringIndex,
+      widthTracker,
+      rowHeight: resolvedHeight,
+      rowIndex,
+    });
+    // Increment for next row (only if rowIndex wasn't explicitly set)
+    if (row.rowIndex === undefined) {
+      currentRowNumber++;
+    } else {
+      // If explicit rowIndex is set, use it + 1 as next default (allows for gaps)
+      currentRowNumber = row.rowIndex + 1;
+    }
   }
 
   yield '</sheetData></worksheet>';

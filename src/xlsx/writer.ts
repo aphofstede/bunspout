@@ -74,6 +74,12 @@ export async function writeXlsx(
       autoDetectColumnWidth: sheetDef.autoDetectColumnWidth,
     };
 
+    // Prepare row height options
+    const rowHeightOptions = {
+      defaultRowHeight: sheetDef.defaultRowHeight,
+      rowHeights: sheetDef.rowHeights,
+    };
+
     // Generate sheet XML
     let sheetXml: AsyncIterable<string>;
     if (opts.sharedStrings === 'shared' && sharedStringsTable) {
@@ -87,12 +93,14 @@ export async function writeXlsx(
         {
           getStringIndex,
           columnWidths: columnWidthOptions,
+          ...rowHeightOptions,
         },
       );
     } else {
       // Use original rows with inline strings
       sheetXml = writeSheetXml(sheetDef.rows, {
         columnWidths: columnWidthOptions,
+        ...rowHeightOptions,
       });
     }
     const xmlStrings = await collect<string>(sheetXml);

@@ -48,6 +48,29 @@ export interface SheetColumnWidthOptions {
   autoDetectColumnWidth?: boolean; // Auto-detect widths for all columns
 }
 
+/**
+ * Row height definition for a sheet
+ * All row indices are 1-based
+ */
+export interface RowHeightDefinition {
+  /**
+   * Single row index (1-based).
+   * Mutually exclusive with rowRange.
+   */
+  rowIndex?: number;
+  /**
+   * Range of rows (1-based, inclusive on both ends).
+   * Mutually exclusive with rowIndex.
+   * @example { from: 1, to: 3 } covers rows 1, 2, and 3
+   */
+  rowRange?: { from: number; to: number };
+  /**
+   * Explicit height in points.
+   * Excel default is approximately 15 points.
+   */
+  height?: number;
+}
+
 export interface WorkbookDefinition {
   sheets: SheetDefinition[];
   properties?: WorkbookProperties;
@@ -60,6 +83,8 @@ export interface SheetDefinition {
   defaultColumnWidth?: number; // Default width for all columns
   columnWidths?: ColumnWidthDefinition[]; // Override specific columns/ranges
   autoDetectColumnWidth?: boolean; // Auto-detect widths for all columns
+  defaultRowHeight?: number; // Default height for all rows (in points)
+  rowHeights?: RowHeightDefinition[]; // Override specific rows/ranges
 }
 
 export interface WriterOptions {
