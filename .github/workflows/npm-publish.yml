@@ -1,0 +1,44 @@
+name: Bun Package
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Bun
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      # Install dependencies
+      - run: bun install --frozen-lockfile
+
+      # Run tests
+      - run: bun test
+
+  publish-npm:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Bun
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      # Configure npm registry (important!)
+      - run: bun config set registry https://registry.npmjs.org/
+
+      # Install deps (required for prepublish scripts, builds, etc.)
+      - run: bun install --frozen-lockfile
+
+      # Publish to npm
+      - run: bun publish
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.npm_token }}
