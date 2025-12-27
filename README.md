@@ -205,7 +205,7 @@ Bunspout focuses on fast, streaming Excel operations. Here are current limitatio
 
 ### 📈 **Performance Considerations**
 - Shared strings mode trades speed for smaller file sizes
-- Column width auto-detection requires buffering (slower)
+- Column width auto-detection requires buffering (slightly slower)
 - Memory usage scales with concurrent operations
 
 ### 🔄 **Excel Compatibility**

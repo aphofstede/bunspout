@@ -1,8 +1,8 @@
-/**
+/*
  * Core domain types for Excel streaming library
  */
 
-// Public API Cell type (more readable, backward compatible)
+// Public API Cell type
 export type Cell = {
   value: string | number | Date | boolean | null | undefined;
   type?: 'string' | 'number' | 'date' | 'boolean';
