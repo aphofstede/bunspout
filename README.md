@@ -1,15 +1,267 @@
 # bunspout
 
-To install dependencies:
+A fast, streaming Excel read/write library for XLSX files. Built with Bun runtime for high-performance data processing.
+
+## Features
+
+- 🚀 **Streaming architecture** - Process large Excel files without loading everything into memory
+- 📊 **Full XLSX support** - Read and write Excel workbooks with multiple sheets
+- 🔧 **TypeScript-first** - Comprehensive type safety with strict mode
+- ⚡ **Bun-optimized** - Built for Bun runtime with adapters for other environments
+- 📈 **Performance-focused** - Benchmarks included for measuring performance
+- 🧩 **Modular design** - Clean separation between XLSX, XML, ZIP, and sheet layers
+
+Traditional XLSX writers often load the entire dataset into memory before writing. Bunspout uses AsyncIterable streams to process rows one by one, which allows:
+	•	Low memory footprint
+	•	Efficient handling of millions of rows
+	•	Better performance in Bun/Node
+
+## Installation
 
 ```bash
 bun install
 ```
 
-To run:
+## Usage
 
-```bash
-bun run index.ts
+### Writing Excel Files
+
+```typescript
+import { writeXlsx, cell, row } from 'bunspout';
+
+// Create a simple workbook with one sheet
+await writeXlsx('output.xlsx', {
+  sheets: [
+    {
+      name: 'Data',
+      rows: (async function* () {
+        yield row([cell('Name'), cell('Age'), cell('City')]);
+        yield row([cell('Alice'), cell(30), cell('New York')]);
+        yield row([cell('Bob'), cell(25), cell('San Francisco')]);
+      })(),
+    },
+  ],
+});
 ```
 
-This project was created using `bun init` in bun v1.3.1. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+### Reading Excel Files
+
+```typescript
+import { readXlsx } from 'bunspout';
+
+const workbook = await readXlsx('input.xlsx');
+
+// Access sheets by name or index
+const sheet = workbook.sheet('Data'); // or workbook.sheet(0)
+
+// Iterate through rows
+for await (const row of sheet.rows()) {
+  console.log(row.cells.map(cell => cell.value));
+}
+```
+
+### Working with Large Datasets
+
+For large datasets, use streaming patterns:
+
+```typescript
+import { writeXlsx, cell, row, mapRows, filterRows } from 'bunspout';
+
+// Process data from a large source
+const rawData = getLargeDataset(); // Some async iterable
+
+await writeXlsx('large-report.xlsx', {
+  sheets: [
+    {
+      name: 'Filtered Data',
+      rows: filterRows(
+        mapRows(rawData, transformRow),
+        row => row.cells.length > 0
+      ),
+    },
+  ],
+});
+```
+
+
+### Database Integration: Exporting from Prisma
+
+A common scenario is exporting database records to Excel. Here's how to export Prisma query results:
+
+```typescript
+// ...
+import { writeXlsx, cell, row } from 'bunspout';
+
+// Query users from database
+const users = await prisma.user.findMany();
+
+// Transform database records to Excel rows
+await writeXlsx('users-report.xlsx', {
+  sheets: [
+    {
+      name: 'Users',
+      rows: (async function* () {
+        // Header row
+        yield row([
+          cell('ID'),
+          cell('Name'),
+          cell('Email'),
+          cell('Created At')
+        ]);
+
+        // Data rows
+        for (const user of users) {
+          yield row([
+            cell(user.id),
+            cell(user.name),
+            cell(user.email),
+            cell(user.createdAt)
+          ]);
+        }
+      })(),
+    },
+  ],
+});
+```
+
+For large datasets, use streaming with Prisma cursors:
+
+```typescript
+import { writeXlsx, cell, row, mapRows } from 'bunspout';
+
+const userStream = async function* () {
+  let cursor: string | undefined;
+
+  while (true) {
+    const batch = await prisma.user.findMany({
+      take: 1000,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+      orderBy: { id: 'asc' }
+    });
+
+    if (batch.length === 0) break;
+
+    yield* batch;
+    cursor = batch[batch.length - 1].id;
+  }
+};
+
+await writeXlsx('large-users-export.xlsx', {
+  sheets: [
+    {
+      name: 'Users',
+      rows: mapRows(userStream(), user => row([
+        cell(user.id),
+        cell(user.name),
+        cell(user.email),
+        cell(user.createdAt)
+      ])),
+    },
+  ],
+});
+```
+
+
+### Cell Types
+
+Bunspout supports all Excel cell types:
+
+```typescript
+import { cell } from 'bunspout';
+
+// Different cell types
+cell('text');          // String
+cell(42);              // Number
+cell(new Date());      // Date
+cell(true);            // Boolean
+cell(null);            // Empty cell
+```
+
+## Limitations / Known Issues
+
+Bunspout focuses on fast, streaming Excel operations. Here are current limitations:
+
+### 🚫 **No Formula Evaluation**
+- Formulas are stored as text (strings starting with `=`)
+- No calculation engine - formulas won't execute in the generated Excel files
+- Use case: Data export with formula templates that users can edit
+
+### 🎨 **Limited Styling Support**
+- No cell formatting (colors, fonts, borders)
+- No conditional formatting
+- Basic text formatting only (dates, numbers, booleans)
+- Use case: Clean data export without visual styling
+
+### 📊 **No Charts or Graphics**
+- Pure data tables only
+- No embedded images, charts, or shapes
+- Use case: Data export for further processing in Excel/other tools
+
+### 🔢 **Data Type Constraints**
+- Large numbers may lose precision in Excel (Excel's limit: 15 significant digits)
+- Very long text may be truncated in some Excel versions
+- Date handling follows Excel's date serial number system
+
+### 📈 **Performance Considerations**
+- Shared strings mode trades speed for smaller file sizes
+- Column width auto-detection requires buffering (slower)
+- Memory usage scales with concurrent operations
+
+### 🔄 **Excel Compatibility**
+- Generated files are valid XLSX but may not include all Excel features
+- Some advanced Excel features (macros, data validation, etc.) not supported
+- Focus on core spreadsheet functionality for maximum compatibility
+
+**Need these features?** Consider post-processing the generated Excel files with libraries like ExcelJS or Apache POI, or contribute to bunspout's development!
+
+## API Reference
+
+### Core Functions
+
+- `writeXlsx(filePath, workbookDefinition, options?)` - Write XLSX file
+- `readXlsx(filePath)` - Read XLSX file and return Workbook
+
+### Data Structures
+
+- `cell(value)` - Create a cell with automatic type detection
+- `row(cells, options?)` - Create a row from cells
+- `Workbook` - Represents an Excel workbook
+- `Sheet` - Represents a worksheet
+
+### Utilities
+
+- `mapRows(rows, mapper)` - Transform rows
+- `filterRows(rows, predicate)` - Filter rows
+- `collect(rows)` - Collect async iterable to array
+
+## Development
+
+```bash
+# Run tests
+bun test
+
+# Run benchmarks
+bun bench
+
+# Lint code
+bun run lint
+
+# Auto-fix linting issues
+bun run lint:fix
+```
+
+## Performance
+
+Bunspout is designed for high performance with large Excel files:
+
+- Streaming XML generation avoids memory bloat
+- Async iterators process data on-demand
+- Shared strings option reduces file size for repeated text
+- Benchmarks included in `src/tests/benchmarks/`
+
+## Contributing
+
+See the hierarchical AGENTS.md files for development guidance:
+- Root `AGENTS.md` - Universal conventions
+- `src/*/AGENTS.md` - Layer-specific patterns and examples
