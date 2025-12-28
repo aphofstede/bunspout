@@ -162,7 +162,7 @@ export class Workbook {
     // Close the zip file
     if (this.zip?.zipFile) {
       try {
-        this.zip?.zipFile.close();
+        this.zip.zipFile.close();
       } catch {
         // Ignore errors during cleanup
       }
