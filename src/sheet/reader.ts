@@ -22,6 +22,8 @@ export async function* parseSheet(
   let inRubyPhonetic = false; // Skip pronunciation data
   let expectedColumnCount: number | null = null; // From spans attribute (1-based last column)
   let currentCellColIndex: number | undefined = undefined; // Column index from cell r attribute
+  let explicitlySetColumns: Set<number> | null = null; // Track which column indices have been explicitly set via r attribute
+  let inlineStringBuffer: string = ''; // Accumulate text from multiple rich text runs in inline strings
 
   for await (const event of xmlEvents) {
     if (event.type === 'startElement') {
@@ -43,6 +45,7 @@ export async function* parseSheet(
           cells: [],
           rowIndex: event.attributes?.r ? parseInt(event.attributes.r, 10) : undefined,
         };
+        explicitlySetColumns = new Set<number>(); // Reset tracking for new row
       } else if (event.name === 'c' && inRow) {
         inCell = true;
         const cellType = event.attributes?.t;
@@ -58,10 +61,12 @@ export async function* parseSheet(
         inInlineStrText = false;
         inRichTextRun = false;
         inRubyPhonetic = false;
+        inlineStringBuffer = ''; // Reset text accumulation buffer
       } else if (event.name === 'v' && inCell && !inInlineStr) {
         inValue = true;
       } else if (event.name === 'is' && inCell) {
         inInlineStr = true;
+        inlineStringBuffer = ''; // Initialize text accumulation buffer for inline string
       } else if (event.name === 'r' && inInlineStr) {
         inRichTextRun = true;
       } else if (event.name === 't' && !inRubyPhonetic) {
@@ -95,8 +100,14 @@ export async function* parseSheet(
         yield currentRow as Row;
         currentRow = null;
         expectedColumnCount = null;
+        explicitlySetColumns = null;
       } else if (event.name === 'c' && inCell && currentCell && currentRow && currentRow.cells) {
         inCell = false;
+        // If we were processing an inline string, use accumulated text (even if empty)
+        if (inInlineStr && currentCell.value === undefined) {
+          currentCell.value = inlineStringBuffer;
+          currentCell.type = 'string';
+        }
         // Add cell even if value is undefined (empty cell) - set to empty string
         if (currentCell.value === undefined) {
           currentCell.value = '';
@@ -129,6 +140,14 @@ export async function* parseSheet(
           while (currentRow.cells.length <= currentCellColIndex) {
             currentRow.cells.push({ value: '', type: 'string' });
           }
+          // Track that this column was explicitly set via r attribute
+          // This allows us to handle out-of-order cells correctly:
+          // - Explicit cells can overwrite empty placeholders (created when padding)
+          // - Explicit cells can overwrite other explicit cells (last one wins)
+          if (explicitlySetColumns) {
+            explicitlySetColumns.add(currentCellColIndex);
+          }
+          // Place cell at explicit position
           currentRow.cells[currentCellColIndex] = cell;
         } else {
           // No explicit position, append in order
@@ -138,6 +157,7 @@ export async function* parseSheet(
         currentCellColIndex = undefined;
         inInlineStr = false;
         inInlineStrText = false;
+        inlineStringBuffer = ''; // Reset buffer after cell is complete
       } else if (event.name === 'v' && inValue) {
         inValue = false;
       } else if (event.name === 't' && inInlineStrText) {
@@ -147,7 +167,13 @@ export async function* parseSheet(
       } else if (event.name === 'rPh' && inRubyPhonetic) {
         inRubyPhonetic = false; // End of pronunciation data
       } else if (event.name === 'is' && inInlineStr) {
+        // End of inline string - set accumulated text (even if empty)
+        if (currentCell) {
+          currentCell.value = inlineStringBuffer;
+          currentCell.type = 'string';
+        }
         inInlineStr = false;
+        inlineStringBuffer = ''; // Reset buffer
       }
     } else if (event.type === 'text') {
       if (inValue && currentCell && !inInlineStr) {
@@ -184,8 +210,8 @@ export async function* parseSheet(
         }
       } else if (inInlineStrText && currentCell && !inRubyPhonetic) {
         // Inline string text element (<t> inside <is>), but skip if in pronunciation data
-        currentCell.value = event.text || '';
-        currentCell.type = 'string';
+        // Accumulate text from multiple rich text runs (multiple <r><t>...</t></r> elements)
+        inlineStringBuffer += event.text || '';
       }
     }
   }
