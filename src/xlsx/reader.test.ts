@@ -847,7 +847,6 @@ describe('XLSXReader', () => {
     const newBuffer = await endZipWriter(newZip);
     await Bun.write(testFile, newBuffer);
 
-    // Try to read it - currently this will fail because we only look for lowercase
     const workbook = await readXlsx(testFile);
     const sheet = workbook.sheet('Data');
 
