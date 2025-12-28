@@ -18,11 +18,27 @@ export async function* parseSheet(
   let inValue = false;
   let inInlineStr = false;
   let inInlineStrText = false;
+  let inRichTextRun = false; // Track <r> elements (rich text runs)
+  let inRubyPhonetic = false; // Skip pronunciation data
+  let expectedColumnCount: number | null = null; // From spans attribute (1-based last column)
+  let currentCellColIndex: number | undefined = undefined; // Column index from cell r attribute
 
   for await (const event of xmlEvents) {
     if (event.type === 'startElement') {
       if (event.name === 'row') {
         inRow = true;
+        // Parse spans attribute to determine expected column count
+        // Format: spans="firstCol:lastCol" (1-based)
+        const spans = event.attributes?.spans;
+        if (spans) {
+          const match = spans.match(/^(\d+):(\d+)$/);
+          if (match && match.length > 2 && match[2]) {
+            const lastCol = parseInt(match[2], 10);
+            expectedColumnCount = lastCol; // Store 1-based last column
+          }
+        } else {
+          expectedColumnCount = null;
+        }
         currentRow = {
           cells: [],
           rowIndex: event.attributes?.r ? parseInt(event.attributes.r, 10) : undefined,
@@ -40,18 +56,45 @@ export async function* parseSheet(
         // Reset inline string state when starting a new cell
         inInlineStr = false;
         inInlineStrText = false;
+        inRichTextRun = false;
+        inRubyPhonetic = false;
       } else if (event.name === 'v' && inCell && !inInlineStr) {
         inValue = true;
       } else if (event.name === 'is' && inCell) {
         inInlineStr = true;
-      } else if (event.name === 't' && inInlineStr) {
-        inInlineStrText = true;
+      } else if (event.name === 'r' && inInlineStr) {
+        inRichTextRun = true;
+      } else if (event.name === 't' && !inRubyPhonetic) {
+        // Only extract <t> elements whose immediate parent is allowed
+        // Reference: "only consider the nodes whose parents are '<si>' or '<r>'"
+        // For inline strings, allow <t> directly under <is> as well for compatibility
+        if (inRichTextRun) {
+          inInlineStrText = true;
+        } else if (inInlineStr) {
+          // Allow <t> directly under <is> for inline strings (extension of reference logic)
+          inInlineStrText = true;
+        }
+        // Skip <t> elements under <rPh> or other containers
+      } else if (event.name === 'rPh' && (inInlineStr || inRichTextRun)) {
+        inRubyPhonetic = true; // Skip pronunciation data
       }
     } else if (event.type === 'endElement') {
       if (event.name === 'row' && inRow && currentRow) {
+        // If spans attribute was present and we have cells, pad cells array to match expected width
+        // Only pad if there are actual cells (empty rows shouldn't be padded)
+        if (expectedColumnCount !== null && currentRow.cells && currentRow.cells.length > 0) {
+          // expectedColumnCount is 1-based, so we need that many cells (indices 0 to expectedColumnCount-1)
+          while (currentRow.cells.length < expectedColumnCount) {
+            currentRow.cells.push({
+              value: '',
+              type: 'string',
+            });
+          }
+        }
         inRow = false;
         yield currentRow as Row;
         currentRow = null;
+        expectedColumnCount = null;
       } else if (event.name === 'c' && inCell && currentCell && currentRow && currentRow.cells) {
         inCell = false;
         // Add cell even if value is undefined (empty cell) - set to empty string
@@ -64,9 +107,9 @@ export async function* parseSheet(
         if (options && currentCell.type === 'date' && typeof currentCell.value === 'number') {
           try {
             currentCell.value = convertExcelTimestamp(currentCell.value, options.use1904Dates ?? false);
-          } catch (error) {
-            // If conversion fails, keep the original numeric value
-            console.warn(`Failed to convert Excel date ${currentCell.value}:`, error);
+          } catch {
+            // If conversion fails, return null for invalid dates
+            currentCell.value = null;
           }
         }
 
@@ -76,17 +119,33 @@ export async function* parseSheet(
         }
 
         const cell: Cell = {
-          value: currentCell.value ?? '',
+          value: currentCell.value !== undefined ? currentCell.value : '',
           ...(currentCell.type !== undefined && { type: currentCell.type }),
         };
-        currentRow.cells.push(cell);
+
+        // If cell has explicit column index, position it correctly; otherwise append
+        if (currentCellColIndex !== undefined && currentCellColIndex >= 0) {
+          // Ensure cells array is large enough
+          while (currentRow.cells.length <= currentCellColIndex) {
+            currentRow.cells.push({ value: '', type: 'string' });
+          }
+          currentRow.cells[currentCellColIndex] = cell;
+        } else {
+          // No explicit position, append in order
+          currentRow.cells.push(cell);
+        }
         currentCell = null;
+        currentCellColIndex = undefined;
         inInlineStr = false;
         inInlineStrText = false;
       } else if (event.name === 'v' && inValue) {
         inValue = false;
       } else if (event.name === 't' && inInlineStrText) {
         inInlineStrText = false;
+      } else if (event.name === 'r' && inRichTextRun) {
+        inRichTextRun = false;
+      } else if (event.name === 'rPh' && inRubyPhonetic) {
+        inRubyPhonetic = false; // End of pronunciation data
       } else if (event.name === 'is' && inInlineStr) {
         inInlineStr = false;
       }
@@ -123,8 +182,8 @@ export async function* parseSheet(
             }
           }
         }
-      } else if (inInlineStrText && currentCell) {
-        // Inline string text element (<t> inside <is>)
+      } else if (inInlineStrText && currentCell && !inRubyPhonetic) {
+        // Inline string text element (<t> inside <is>), but skip if in pronunciation data
         currentCell.value = event.text || '';
         currentCell.type = 'string';
       }

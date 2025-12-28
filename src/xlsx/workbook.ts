@@ -80,7 +80,7 @@ export class Workbook {
     }
 
     const sharedStringsEntry = this.zip.entries.find(
-      (e) => e.fileName === 'xl/sharedStrings.xml',
+      (e) => e.fileName.toLowerCase() === 'xl/sharedstrings.xml',
     );
 
     if (sharedStringsEntry) {
