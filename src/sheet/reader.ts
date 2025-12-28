@@ -1,4 +1,5 @@
 import type { ReadOptions } from '@xlsx/types';
+import { parseCellReference } from '@utils/cell-reference';
 import { convertExcelTimestamp } from '@utils/dates';
 import type { Cell, Row, XmlEvent } from '../types';
 
@@ -29,6 +30,8 @@ export async function* parseSheet(
       } else if (event.name === 'c' && inRow) {
         inCell = true;
         const cellType = event.attributes?.t;
+        const cellRef = event.attributes?.r; // Cell reference like "A1", "B1", etc.
+        currentCellColIndex = cellRef ? parseCellReference(cellRef)?.colIndex : undefined;
         currentCell = {
           type: cellType === 's' || cellType === 'inlineStr' ? 'string' :
             cellType === 'd' ? 'date' :
