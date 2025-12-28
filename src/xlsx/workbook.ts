@@ -40,8 +40,9 @@ export class Workbook {
     const properties: WorkbookProperties = {};
 
     // Parse core properties
+    // Use case-insensitive matching for robustness across different XLSX file generators
     const coreEntry = this.zip.entries.find(
-      (e) => e.fileName === 'docProps/core.xml',
+      (e) => e.fileName.toLowerCase() === 'docprops/core.xml',
     );
     if (coreEntry) {
       const coreProps = await parseCoreProperties(coreEntry, this.zip.zipFile);
@@ -49,8 +50,9 @@ export class Workbook {
     }
 
     // Parse custom properties
+    // Use case-insensitive matching for robustness across different XLSX file generators
     const customEntry = this.zip.entries.find(
-      (e) => e.fileName === 'docProps/custom.xml',
+      (e) => e.fileName.toLowerCase() === 'docprops/custom.xml',
     );
     if (customEntry) {
       const customProps = await parseCustomProperties(customEntry, this.zip.zipFile);
