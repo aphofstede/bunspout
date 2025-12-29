@@ -70,6 +70,175 @@ describe('Row Parser', () => {
     expect(cell?.type).toBe('number');
   });
 
+  test('should parse formula cell with numeric computed value', async () => {
+    const xml = '<row><c><f>SUM(A1:A5)</f><v>42</v></c></row>';
+    const bytes = async function* () {
+      yield new TextEncoder().encode(xml);
+    }();
+
+    const rows: Row[] = [];
+    for await (const row of parseSheet(parseXmlEvents(bytes))) {
+      rows.push(row);
+    }
+
+    const cell = rows[0]?.cells[0];
+    expect(cell?.type).toBe('formula');
+    expect(cell?.value).toBe('=SUM(A1:A5)');
+    expect(cell?.formula).toBe('SUM(A1:A5)');
+    expect(cell?.computedValue).toBe(42);
+  });
+
+  test('should parse formula cell with string computed value', async () => {
+    const xml = '<row><c><f>CONCATENATE(A1,B1)</f><v>Hello World</v></c></row>';
+    const bytes = async function* () {
+      yield new TextEncoder().encode(xml);
+    }();
+
+    const rows: Row[] = [];
+    for await (const row of parseSheet(parseXmlEvents(bytes))) {
+      rows.push(row);
+    }
+
+    const cell = rows[0]?.cells[0];
+    expect(cell?.type).toBe('formula');
+    expect(cell?.value).toBe('=CONCATENATE(A1,B1)');
+    expect(cell?.formula).toBe('CONCATENATE(A1,B1)');
+    expect(cell?.computedValue).toBe('Hello World');
+  });
+
+  test('should parse formula cell with empty computed value', async () => {
+    const xml = '<row><c><f>IF(A1&gt;0,A1,"")</f><v></v></c></row>';
+    const bytes = async function* () {
+      yield new TextEncoder().encode(xml);
+    }();
+
+    const rows: Row[] = [];
+    for await (const row of parseSheet(parseXmlEvents(bytes))) {
+      rows.push(row);
+    }
+
+    const cell = rows[0]?.cells[0];
+    expect(cell?.type).toBe('formula');
+    expect(cell?.value).toBe('=IF(A1>0,A1,"")');
+    expect(cell?.formula).toBe('IF(A1>0,A1,"")');
+    expect(cell?.computedValue).toBe(null);
+  });
+
+  test('should parse formula cell with zero computed value', async () => {
+    const xml = '<row><c><f>SUM(A1:A1)</f><v>0</v></c></row>';
+    const bytes = async function* () {
+      yield new TextEncoder().encode(xml);
+    }();
+
+    const rows: Row[] = [];
+    for await (const row of parseSheet(parseXmlEvents(bytes))) {
+      rows.push(row);
+    }
+
+    const cell = rows[0]?.cells[0];
+    expect(cell?.type).toBe('formula');
+    expect(cell?.value).toBe('=SUM(A1:A1)');
+    expect(cell?.formula).toBe('SUM(A1:A1)');
+    expect(cell?.computedValue).toBe(0);
+  });
+
+  test('should parse formula cell with decimal computed value', async () => {
+    const xml = '<row><c><f>AVERAGE(A1:A3)</f><v>3.14159</v></c></row>';
+    const bytes = async function* () {
+      yield new TextEncoder().encode(xml);
+    }();
+
+    const rows: Row[] = [];
+    for await (const row of parseSheet(parseXmlEvents(bytes))) {
+      rows.push(row);
+    }
+
+    const cell = rows[0]?.cells[0];
+    expect(cell?.type).toBe('formula');
+    expect(cell?.value).toBe('=AVERAGE(A1:A3)');
+    expect(cell?.formula).toBe('AVERAGE(A1:A3)');
+    expect(cell?.computedValue).toBe(3.14159);
+  });
+
+  test('should parse row with mixed formula and regular cells', async () => {
+    const xml = '<row><c><v>10</v></c><c><f>SUM(A1:A1)</f><v>10</v></c><c><v>20</v></c></row>';
+    const bytes = async function* () {
+      yield new TextEncoder().encode(xml);
+    }();
+
+    const rows: Row[] = [];
+    for await (const row of parseSheet(parseXmlEvents(bytes))) {
+      rows.push(row);
+    }
+
+    expect(rows[0]?.cells).toHaveLength(3);
+    expect(rows[0]?.cells[0]?.value).toBe(10);
+    expect(rows[0]?.cells[0]?.type).toBe('number');
+    expect(rows[0]?.cells[1]?.type).toBe('formula');
+    expect(rows[0]?.cells[1]?.value).toBe('=SUM(A1:A1)');
+    expect(rows[0]?.cells[1]?.computedValue).toBe(10);
+    expect(rows[0]?.cells[2]?.value).toBe(20);
+    expect(rows[0]?.cells[2]?.type).toBe('number');
+  });
+
+  test('should parse formula cell without computed value element', async () => {
+    // Formula cell without <v> element - can occur with manual calculation mode
+    // or when formulas haven't been evaluated yet
+    const xml = '<row><c><f>SUM(A1:A5)</f></c></row>';
+    const bytes = async function* () {
+      yield new TextEncoder().encode(xml);
+    }();
+
+    const rows: Row[] = [];
+    for await (const row of parseSheet(parseXmlEvents(bytes))) {
+      rows.push(row);
+    }
+
+    const cell = rows[0]?.cells[0];
+    expect(cell?.type).toBe('formula');
+    expect(cell?.value).toBe('=SUM(A1:A5)');
+    expect(cell?.formula).toBe('SUM(A1:A5)');
+    expect(cell?.computedValue).toBeUndefined();
+  });
+
+  test('should parse formula cell with boolean computed value (TRUE)', async () => {
+    // Formula that returns TRUE - stored as 1 in XLSX
+    const xml = '<row><c t="b"><f>A1&gt;B1</f><v>1</v></c></row>';
+    const bytes = async function* () {
+      yield new TextEncoder().encode(xml);
+    }();
+
+    const rows: Row[] = [];
+    for await (const row of parseSheet(parseXmlEvents(bytes))) {
+      rows.push(row);
+    }
+
+    const cell = rows[0]?.cells[0];
+    expect(cell?.type).toBe('formula');
+    expect(cell?.value).toBe('=A1>B1');
+    expect(cell?.formula).toBe('A1>B1');
+    expect(cell?.computedValue).toBe(true);
+  });
+
+  test('should parse formula cell with boolean computed value (FALSE)', async () => {
+    // Formula that returns FALSE - stored as 0 in XLSX
+    const xml = '<row><c t="b"><f>A1&gt;B1</f><v>0</v></c></row>';
+    const bytes = async function* () {
+      yield new TextEncoder().encode(xml);
+    }();
+
+    const rows: Row[] = [];
+    for await (const row of parseSheet(parseXmlEvents(bytes))) {
+      rows.push(row);
+    }
+
+    const cell = rows[0]?.cells[0];
+    expect(cell?.type).toBe('formula');
+    expect(cell?.value).toBe('=A1>B1');
+    expect(cell?.formula).toBe('A1>B1');
+    expect(cell?.computedValue).toBe(false);
+  });
+
   test('should parse row with attributes (row index)', async () => {
     const xml = '<row r="1"><c><v>Test</v></c></row>';
     const bytes = async function* () {

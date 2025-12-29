@@ -39,10 +39,14 @@ export async function* parseSheet(
   let inInlineStrText = false;
   let inRichTextRun = false; // Track <r> elements (rich text runs)
   let inRubyPhonetic = false; // Skip pronunciation data
+  let inFormula = false; // Track <f> elements (formula)
   let expectedColumnCount: number | null = null; // From spans attribute (1-based last column)
   let currentCellColIndex: number | undefined = undefined; // Column index from cell r attribute
   let explicitlySetColumns: Set<number> | null = null; // Track which column indices have been explicitly set via r attribute
   let inlineStringBuffer: string = ''; // Accumulate text from multiple rich text runs in inline strings
+  let formulaBuffer: string = ''; // Accumulate formula text from <f> element
+  let computedValueBuffer: string = ''; // Accumulate computed value from <v> element in formula cells
+  let originalCellType: string | undefined = undefined; // Track original t attribute for formula cells
 
   for await (const event of xmlEvents) {
     if (event.type === 'startElement') {
@@ -70,6 +74,7 @@ export async function* parseSheet(
         const cellType = event.attributes?.t;
         const cellRef = event.attributes?.r; // Cell reference like "A1", "B1", etc.
         currentCellColIndex = cellRef ? parseCellReference(cellRef)?.colIndex : undefined;
+        originalCellType = cellType; // Store original type attribute for formula cells
         currentCell = {
           type: cellType === 's' || cellType === 'inlineStr' ? 'string' :
             cellType === 'd' ? 'date' :
@@ -80,9 +85,21 @@ export async function* parseSheet(
         inInlineStrText = false;
         inRichTextRun = false;
         inRubyPhonetic = false;
+        inFormula = false;
         inlineStringBuffer = ''; // Reset text accumulation buffer
+        formulaBuffer = ''; // Reset formula buffer
+        computedValueBuffer = ''; // Reset computed value buffer
+      } else if (event.name === 'f' && inCell) {
+        // Formula element - extract formula text
+        inFormula = true;
+        formulaBuffer = ''; // Initialize formula buffer
       } else if (event.name === 'v' && inCell && !inInlineStr) {
         inValue = true;
+        // If this is a formula cell, accumulate the computed value separately
+        // Note: <f> always comes before <v> in XLSX, so inFormula is already false here
+        if (currentCell?.type === 'formula') {
+          computedValueBuffer = ''; // Initialize computed value buffer
+        }
       } else if (event.name === 'is' && inCell) {
         inInlineStr = true;
         inlineStringBuffer = ''; // Initialize text accumulation buffer for inline string
@@ -155,6 +172,8 @@ export async function* parseSheet(
         const cell: Cell = {
           value: currentCell.value !== undefined ? currentCell.value : '',
           ...(currentCell.type !== undefined && { type: currentCell.type }),
+          ...(currentCell.formula !== undefined && { formula: currentCell.formula }),
+          ...(currentCell.computedValue !== undefined && { computedValue: currentCell.computedValue }),
         };
 
         // If cell has explicit column index, position it correctly; otherwise append
@@ -178,11 +197,49 @@ export async function* parseSheet(
         }
         currentCell = null;
         currentCellColIndex = undefined;
+        originalCellType = undefined; // Reset original cell type
         inInlineStr = false;
         inInlineStrText = false;
+        inFormula = false;
         inlineStringBuffer = ''; // Reset buffer after cell is complete
+        formulaBuffer = ''; // Reset formula buffer
+        computedValueBuffer = ''; // Reset computed value buffer
+      } else if (event.name === 'f' && inFormula) {
+        // End of formula element - mark cell as formula type
+        inFormula = false;
+        if (currentCell) {
+          currentCell.type = 'formula';
+          // Store formula without "=" prefix in formula property
+          currentCell.formula = formulaBuffer;
+          // Store formula with "=" prefix in value property
+          currentCell.value = `=${formulaBuffer}`;
+        }
+        formulaBuffer = ''; // Reset buffer
       } else if (event.name === 'v' && inValue) {
         inValue = false;
+        // If this was a formula cell, we've finished reading the computed value
+        if (currentCell && currentCell?.type === 'formula') {
+          const text = computedValueBuffer.trim();
+          // Note: Formula computed values are typically stored directly in <v>,
+          // not as shared string references. If a formula cell has t="s", it would
+          // indicate the computed value type, but Excel usually stores the actual value.
+          // For now, we parse the computed value directly. If shared string support
+          // is needed for formula computed values, we can add it later.
+
+          // Check if the original cell type was boolean (t="b")
+          // Formula cells with boolean results are stored as 1 (TRUE) or 0 (FALSE)
+          const isNumeric = text !== '' && !isNaN(Number(text));
+          if (originalCellType === 'b' && isNumeric) {
+            currentCell.computedValue = Number(text) === 1;
+          } else if (isNumeric) {
+            // Try to parse as number if it looks like a number
+            currentCell.computedValue = Number(text);
+          } else {
+            // Store as string or null
+            currentCell.computedValue = text === '' ? null : text;
+          }
+          computedValueBuffer = ''; // Reset buffer
+        }
       } else if (event.name === 't' && inInlineStrText) {
         inInlineStrText = false;
       } else if (event.name === 'r' && inRichTextRun) {
@@ -199,12 +256,18 @@ export async function* parseSheet(
         inlineStringBuffer = ''; // Reset buffer
       }
     } else if (event.type === 'text') {
-      if (inValue && currentCell && !inInlineStr) {
+      if (inFormula && currentCell) {
+        // Formula text element (<f>)
+        formulaBuffer += event.text || '';
+      } else if (inValue && currentCell && !inInlineStr) {
         // Regular value element (<v>)
         const text = event.text || '';
 
-        // If cell type is 's' (shared string), look up the string by index
-        if (currentCell.type === 'string' && getSharedString) {
+        // If this is a formula cell, accumulate the computed value
+        if (currentCell.type === 'formula') {
+          computedValueBuffer += text;
+        } else if (currentCell.type === 'string' && getSharedString) {
+          // If cell type is 's' (shared string), look up the string by index
           const index = parseInt(text, 10);
           if (!isNaN(index)) {
             const sharedString = await getSharedString(index);
