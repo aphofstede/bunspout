@@ -50,28 +50,32 @@ function finalizeCell(
     currentCellStyleIndex,
   } = context;
 
+  // Work with local variables to avoid mutating input
+  let value: string | number | Date | boolean | null | undefined = cell.value;
+  let type: Cell['type'] = cell.type;
+
   // Default empty cells
-  if (cell.value === undefined) {
-    cell.value = '';
-    cell.type = 'string';
+  if (value === undefined) {
+    value = '';
+    type = 'string';
   }
 
   // Handle date cells
   if (options) {
     // Check if this is an ISO 8601 date string (t="d")
-    if (cell.type === 'date' && typeof cell.value === 'string') {
+    if (type === 'date' && typeof value === 'string') {
       // ISO 8601 date string - parse to Date object if shouldFormatDates is false
       if (!options.shouldFormatDates) {
         try {
-          cell.value = new Date(cell.value);
+          value = new Date(value);
         } catch {
           // If parsing fails, keep as string
         }
       }
       // If shouldFormatDates is true, keep as string (already formatted)
-    } else if (typeof cell.value === 'number') {
+    } else if (typeof value === 'number') {
       // Check if this numeric cell should be treated as a date
-      let isDate = cell.type === 'date';
+      let isDate = type === 'date';
       let formatCode: string | null = null;
 
       // Check format code to detect dates
@@ -80,43 +84,43 @@ function finalizeCell(
         if (formatCode && isDateFormatCode(formatCode)) {
           isDate = true;
           // Override the type if it was automatically set to 'number'
-          cell.type = 'date';
+          type = 'date';
         }
       }
 
       // Convert numeric date cells
       if (isDate) {
         try {
-          const date = convertExcelTimestamp(cell.value, options.use1904Dates ?? false);
+          const date = convertExcelTimestamp(value, options.use1904Dates ?? false);
 
           if (options.shouldFormatDates && formatCode) {
             // Format the date according to the format code
             const dateFnsFormat = convertExcelFormatToDateFns(formatCode);
-            cell.value = format(date, dateFnsFormat);
+            value = format(date, dateFnsFormat);
           } else if (options.shouldFormatDates) {
             // No format code found, use default format
-            cell.value = format(date, DEFAULT_DATE_FORMAT);
+            value = format(date, DEFAULT_DATE_FORMAT);
           } else {
             // Return Date object
-            cell.value = date;
+            value = date;
           }
         } catch {
           // If conversion fails, return null for invalid dates
-          cell.value = null;
+          value = null;
         }
       }
     }
   }
 
   // Convert boolean cells
-  if (cell.type === 'boolean' && typeof cell.value === 'number') {
-    cell.value = cell.value === 1;
+  if (type === 'boolean' && typeof value === 'number') {
+    value = value === 1;
   }
 
-  // Build final cell object
+  // Build and return final cell object
   return {
-    value: cell.value !== undefined ? cell.value : '',
-    ...(cell.type !== undefined && { type: cell.type }),
+    value: value !== undefined ? value : '',
+    ...(type !== undefined && { type }),
     ...(cell.formula !== undefined && { formula: cell.formula }),
     ...(cell.computedValue !== undefined && { computedValue: cell.computedValue }),
   };
