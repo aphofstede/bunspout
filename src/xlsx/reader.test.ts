@@ -841,5 +841,71 @@ describe('XLSXReader', () => {
     expect(rows[3]?.cells[2]?.value).toBe('');
     expect(rows[4]?.cells[0]?.value).toBe('Row5');
   });
+
+  test('should read formula cells and return computed values', async () => {
+    // Create a minimal XLSX file with formula cells
+    // We'll manually create the ZIP structure since we can't write formulas yet
+    const { createZipWriter, writeZipEntry, endZipWriter } = await import('@zip/writer');
+    const { generateContentTypes, generateRels, generateWorkbook, generateWorkbookRels } = await import('./structure');
+
+    const zip = createZipWriter();
+
+    // Create sheet XML with formula cells
+    const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData>
+    <row r="1">
+      <c r="A1"><v>10</v></c>
+      <c r="B1"><v>20</v></c>
+      <c r="C1"><f>SUM(A1:B1)</f><v>30</v></c>
+    </row>
+    <row r="2">
+      <c r="A2"><v>5</v></c>
+      <c r="B2"><f>AVERAGE(A1:A2)</f><v>7.5</v></c>
+    </row>
+  </sheetData>
+</worksheet>`;
+
+    // Add required files to ZIP
+    const stringToBytes = async function* (str: string) {
+      yield new TextEncoder().encode(str);
+    };
+
+    await writeZipEntry(zip, '[Content_Types].xml', stringToBytes(generateContentTypes([{ id: 1 }])));
+    await writeZipEntry(zip, '_rels/.rels', stringToBytes(generateRels()));
+    await writeZipEntry(zip, 'xl/workbook.xml', stringToBytes(generateWorkbook([{ name: 'Sheet1', id: 1 }])));
+    await writeZipEntry(zip, 'xl/_rels/workbook.xml.rels', stringToBytes(generateWorkbookRels([{ id: 1 }])));
+    await writeZipEntry(zip, 'xl/worksheets/sheet1.xml', stringToBytes(sheetXml));
+
+    const buffer = await endZipWriter(zip);
+    await Bun.write(testFile, buffer);
+
+    // Read the file using readXlsx
+    const workbook = await readXlsx(testFile);
+    const sheet = workbook.sheet('Sheet1');
+
+    const rows: any[] = [];
+    for await (const row of sheet.rows()) {
+      rows.push(row);
+    }
+
+    // Verify formula cells are read correctly
+    expect(rows).toHaveLength(2);
+
+    // Row 1: regular cells + formula cell
+    expect(rows[0]?.cells[0]?.value).toBe(10);
+    expect(rows[0]?.cells[1]?.value).toBe(20);
+    expect(rows[0]?.cells[2]?.type).toBe('formula');
+    expect(rows[0]?.cells[2]?.value).toBe('=SUM(A1:B1)');
+    expect(rows[0]?.cells[2]?.formula).toBe('SUM(A1:B1)');
+    expect(rows[0]?.cells[2]?.computedValue).toBe(30);
+
+    // Row 2: regular cell + formula cell
+    expect(rows[1]?.cells[0]?.value).toBe(5);
+    expect(rows[1]?.cells[1]?.type).toBe('formula');
+    expect(rows[1]?.cells[1]?.value).toBe('=AVERAGE(A1:A2)');
+    expect(rows[1]?.cells[1]?.formula).toBe('AVERAGE(A1:A2)');
+    expect(rows[1]?.cells[1]?.computedValue).toBe(7.5);
+  });
 });
 
