@@ -94,7 +94,9 @@ export async function parseStyles(
 }
 
 /**
- * Gets format code for a style index, checking both custom and built-in formats
+ * Gets format code for a style index from the style format map
+ * The map already contains both custom and built-in formats (populated by parseStyles)
+ * Returns null if no format code is found for the given style index
  */
 export function getFormatCodeForStyle(
   styleIndex: number | undefined,
@@ -104,15 +106,15 @@ export function getFormatCodeForStyle(
     return null;
   }
 
-  // Check custom formats first
-  const customFormat = styleFormatMap.get(styleIndex);
-  if (customFormat) {
-    return customFormat;
+  // Look up format code in the map (contains both custom and built-in formats)
+  // Built-in formats are already included in the map by parseStyles()
+  const formatCode = styleFormatMap.get(styleIndex);
+  if (formatCode) {
+    return formatCode;
   }
 
-  // If not found, check if styleIndex corresponds to a built-in format
-  // In Excel, style index 0 typically uses format 0 (General)
-  // We'll return null and let the caller use a default
+  // If not found in map, return null to let the caller use a default format
+  // This happens when the style index doesn't have an associated format code
   return null;
 }
 
