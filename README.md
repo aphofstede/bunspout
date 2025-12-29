@@ -193,9 +193,10 @@ cell(null);            // Empty cell
 Bunspout focuses on fast, streaming Excel operations. The package is currently in the alpha stage.
 Here are current limitations:
 
-### 🚫 **No Formula Evaluation**
-- Formulas are stored as text (strings starting with `=`)
+### 🚫 **Limited Formula Evaluation**
+- When reading, formula's computed values are read, if available
 - No calculation engine - formulas won't execute in the generated Excel files
+- Formulas are stored as text (strings starting with `=`)
 - Use case: Data export with formula templates that users can edit
 
 ### 🎨 **Limited Styling Support**
@@ -215,7 +216,7 @@ Here are current limitations:
 - Date handling follows Excel's date serial number system
 
 ### 📈 **Performance Considerations**
-- Shared strings mode trades speed for smaller file sizes
+- Shared strings mode is slower but produces smaller file sizes
 - Column width auto-detection requires buffering (slightly slower)
 - Memory usage scales with concurrent operations
 
