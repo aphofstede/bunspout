@@ -1,6 +1,13 @@
+import { format } from 'date-fns';
+import { getFormatCodeForStyle, type StyleFormatMap } from '@xlsx/styles-reader';
 import type { ReadOptions } from '@xlsx/types';
 import { parseCellReference } from '@utils/cell-reference';
 import { convertExcelTimestamp } from '@utils/dates';
+import {
+  convertExcelFormatToDateFns,
+  DEFAULT_DATE_FORMAT,
+  isDateFormatCode,
+} from '@utils/format-codes';
 import type { Cell, Row, XmlEvent } from '../types';
 
 /**
@@ -29,6 +36,7 @@ export async function* parseSheet(
   xmlEvents: AsyncIterable<XmlEvent>,
   getSharedString?: (index: number) => Promise<string | undefined>,
   options?: ReadOptions,
+  styleFormatMap?: StyleFormatMap,
 ): AsyncIterable<Row> {
   let currentRow: Partial<Row> | null = null;
   let currentCell: Partial<Cell> | null = null;
@@ -47,6 +55,7 @@ export async function* parseSheet(
   let formulaBuffer: string = ''; // Accumulate formula text from <f> element
   let computedValueBuffer: string = ''; // Accumulate computed value from <v> element in formula cells
   let originalCellType: string | undefined = undefined; // Track original t attribute for formula cells
+  let currentCellStyleIndex: number | undefined = undefined; // Style index from cell s attribute
 
   for await (const event of xmlEvents) {
     if (event.type === 'startElement') {
@@ -73,8 +82,17 @@ export async function* parseSheet(
         inCell = true;
         const cellType = event.attributes?.t;
         const cellRef = event.attributes?.r; // Cell reference like "A1", "B1", etc.
+        const styleIndexAttr = event.attributes?.s; // Style index
         currentCellColIndex = cellRef ? parseCellReference(cellRef)?.colIndex : undefined;
         originalCellType = cellType; // Store original type attribute for formula cells
+
+        // Parse style index
+        if (styleIndexAttr) {
+          const parsed = parseInt(styleIndexAttr, 10);
+          currentCellStyleIndex = !isNaN(parsed) ? parsed : undefined;
+        } else {
+          currentCellStyleIndex = undefined;
+        }
         currentCell = {
           type: cellType === 's' || cellType === 'inlineStr' ? 'string' :
             cellType === 'd' ? 'date' :
@@ -154,13 +172,55 @@ export async function* parseSheet(
           currentCell.type = 'string';
         }
 
-        // Convert date cells if options are provided
-        if (options && currentCell.type === 'date' && typeof currentCell.value === 'number') {
-          try {
-            currentCell.value = convertExcelTimestamp(currentCell.value, options.use1904Dates ?? false);
-          } catch {
-            // If conversion fails, return null for invalid dates
-            currentCell.value = null;
+        // Handle date cells
+        if (options) {
+          // Check if this is an ISO 8601 date string (t="d")
+          if (currentCell.type === 'date' && typeof currentCell.value === 'string') {
+            // ISO 8601 date string - parse to Date object if shouldFormatDates is false
+            if (!options.shouldFormatDates) {
+              try {
+                currentCell.value = new Date(currentCell.value);
+              } catch {
+                // If parsing fails, keep as string
+              }
+            }
+            // If shouldFormatDates is true, keep as string (already formatted)
+          } else if (typeof currentCell.value === 'number') {
+            // Check if this numeric cell should be treated as a date
+            let isDate = currentCell.type === 'date';
+            let formatCode: string | null = null;
+
+            // If date formatting is enabled, check format code
+            if (options.shouldFormatDates && styleFormatMap && currentCellStyleIndex !== undefined) {
+              formatCode = getFormatCodeForStyle(currentCellStyleIndex, styleFormatMap);
+              if (formatCode && isDateFormatCode(formatCode)) {
+                isDate = true;
+                // Override the type if it was automatically set to 'number'
+                currentCell.type = 'date';
+              }
+            }
+
+            // Convert numeric date cells
+            if (isDate) {
+              try {
+                const date = convertExcelTimestamp(currentCell.value, options.use1904Dates ?? false);
+
+                if (options.shouldFormatDates && formatCode) {
+                  // Format the date according to the format code
+                  const dateFnsFormat = convertExcelFormatToDateFns(formatCode);
+                  currentCell.value = format(date, dateFnsFormat);
+                } else if (options.shouldFormatDates) {
+                  // No format code found, use default format
+                  currentCell.value = format(date, DEFAULT_DATE_FORMAT);
+                } else {
+                  // Return Date object
+                  currentCell.value = date;
+                }
+              } catch {
+                // If conversion fails, return null for invalid dates
+                currentCell.value = null;
+              }
+            }
           }
         }
 
@@ -197,6 +257,7 @@ export async function* parseSheet(
         }
         currentCell = null;
         currentCellColIndex = undefined;
+        currentCellStyleIndex = undefined; // Reset style index
         originalCellType = undefined; // Reset original cell type
         inInlineStr = false;
         inInlineStrText = false;
