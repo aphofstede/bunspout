@@ -105,5 +105,12 @@ export interface ReadOptions {
    * @default true
    */
   skipEmptyRows?: boolean;
+  /**
+   * Format dates as strings according to their Excel format codes.
+   * When false (default), dates are returned as Date objects.
+   * When true, dates are returned as formatted strings matching Excel's display format.
+   * @default false
+   */
+  shouldFormatDates?: boolean;
 }
 

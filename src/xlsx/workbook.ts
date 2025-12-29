@@ -7,6 +7,7 @@ import { parseCoreProperties, parseCustomProperties } from './properties-reader'
 import type { SharedStringsCachingStrategy } from './shared-strings-caching';
 import { parseSharedStrings } from './shared-strings-reader';
 import type { SheetProperties } from './sheet-properties-reader';
+import { parseStyles, type StyleFormatMap } from './styles-reader';
 import type { ReadOptions, WorkbookProperties } from './types';
 
 export type SheetInfo = {
@@ -19,6 +20,7 @@ export class Workbook {
   private zip: ZipFile;
   private readonly _sheets: Sheet[];
   private sharedStrings: SharedStringsCachingStrategy | null = null;
+  private styleFormatMap: StyleFormatMap | null = null;
   private readonly options?: ReadOptions;
   private _properties: WorkbookProperties | null = null;
 
@@ -109,6 +111,34 @@ export class Workbook {
   }
 
   /**
+   * Loads styles.xml to extract format codes mapped to style indices
+   */
+  async loadStyles(): Promise<void> {
+    if (this.styleFormatMap !== null) {
+      return; // Already loaded
+    }
+
+    const stylesEntry = this.zip.entries.find(
+      (e) => e.fileName.toLowerCase() === 'xl/styles.xml',
+    );
+
+    if (stylesEntry) {
+      this.styleFormatMap = await parseStyles(stylesEntry, this.zip.zipFile);
+    } else {
+      // No styles.xml found, create empty map
+      this.styleFormatMap = new Map();
+    }
+  }
+
+  /**
+   * Gets the style format map (loaded lazily on first access)
+   */
+  async getStyleFormatMap(): Promise<StyleFormatMap> {
+    await this.loadStyles();
+    return this.styleFormatMap ?? new Map();
+  }
+
+  /**
    * Gets a sheet by name or index (synchronous - metadata already loaded)
    */
   sheet(nameOrIndex: string | number): Sheet {
@@ -131,14 +161,15 @@ export class Workbook {
    * Reads rows from a sheet entry
    */
   async *readSheetRows(entry: ZipEntry): AsyncIterable<Row> {
-    // Ensure shared strings are loaded
     await this.loadSharedStrings();
+    const styleFormatMap = await this.getStyleFormatMap();
 
     // Stream XML directly from ZIP to parser (no accumulation)
     yield* parseSheet(
       parseXmlEvents(readZipEntry(entry, this.zip.zipFile)),
       (index: number) => this.getSharedString(index),
       this.options,
+      styleFormatMap,
     );
   }
 
