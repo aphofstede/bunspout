@@ -97,7 +97,7 @@ describe('Integration Tests', () => {
     expect(readRows[3]?.rowIndex).toBe(4);
   });
 
-  test('should parse date cells when use1904Dates is enabled', async () => {
+  test('should parse date cells with 1900 date system (use1904Dates: false)', async () => {
     const testFile = 'date-test.xlsx';
 
     // Write a file with date cells (this will be written as numbers with date type)
@@ -113,7 +113,7 @@ describe('Integration Tests', () => {
       ],
     });
 
-    // Read back with date parsing enabled
+    // Read back using the 1900 date system (use1904Dates: false)
     const workbook = await readXlsx(testFile, { use1904Dates: false });
     const sheet = workbook.sheet('Dates');
 

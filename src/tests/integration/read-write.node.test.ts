@@ -129,7 +129,7 @@ describe('Integration Tests (Node.js)', () => {
     expect.toBe(readRows[3]?.rowIndex, 4);
   });
 
-  test('should parse date cells when use1904Dates is enabled', async () => {
+  test('should parse date cells with 1900 date system (use1904Dates: false)', async () => {
     const dateTestFile = 'date-test-node.xlsx';
 
     // Write a file with date cells (this will be written as numbers with date type)
@@ -145,7 +145,7 @@ describe('Integration Tests (Node.js)', () => {
       ],
     });
 
-    // Read back with date parsing enabled
+    // Read back using the 1900 date system (use1904Dates: false)
     const workbook = await readXlsx(dateTestFile, { use1904Dates: false });
     const sheet = workbook.sheet('Dates');
 
@@ -351,4 +351,3 @@ describe('Integration Tests (Node.js)', () => {
     }
   });
 });
-
