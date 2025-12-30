@@ -62,3 +62,10 @@ export async function* readableStreamToBytes(
     reader.releaseLock();
   }
 }
+
+/**
+ * Writes a buffer to a file (Bun implementation)
+ */
+export async function writeFile(filePath: string, buffer: Uint8Array | Buffer): Promise<void> {
+  await Bun.write(filePath, buffer);
+}

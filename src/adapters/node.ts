@@ -51,3 +51,11 @@ export async function writeRowsToFile(
   const writeStream = createWriteStream(filePath);
   await pipeline(stream, writeStream);
 }
+
+/**
+ * Writes a buffer to a file (Node.js implementation)
+ */
+export async function writeFile(filePath: string, buffer: Uint8Array | Buffer): Promise<void> {
+  const { writeFile: fsWriteFile } = await import('fs/promises');
+  await fsWriteFile(filePath, buffer);
+}
