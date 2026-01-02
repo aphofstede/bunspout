@@ -1,25 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, test, expect, afterEach } from 'bun:test';
 import { readXlsx } from '@xlsx/reader';
 import { writeXlsx } from '@xlsx/writer';
 import { cell } from '@sheet/cell';
 import { row } from '@sheet/row';
+import { describe, test, expect, afterEach } from '@tests/framework';
+import { cleanupTestFiles } from '@tests/helpers';
 
 describe('Integration Tests', () => {
   const testFile = 'integration-test.xlsx';
 
   afterEach(async () => {
-    if (await Bun.file(testFile).exists()) {
-      await import('fs').then((fs) => fs.promises.unlink(testFile));
-    }
-    // Also clean up date-test.xlsx if it exists
-    if (await Bun.file('date-test.xlsx').exists()) {
-      await import('fs').then((fs) => fs.promises.unlink('date-test.xlsx'));
-    }
-    // Clean up date-test-1904.xlsx if it exists
-    if (await Bun.file('date-test-1904.xlsx').exists()) {
-      await import('fs').then((fs) => fs.promises.unlink('date-test-1904.xlsx'));
-    }
+    await cleanupTestFiles(testFile, 'date-test.xlsx', 'date-test-1904.xlsx');
   });
 
   test('should write rows → ZIP → read back → verify rows match', async () => {

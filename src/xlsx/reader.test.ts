@@ -1,19 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, test, expect, afterEach } from 'bun:test';
 import { cell } from '@sheet/cell';
 import { parseSheet } from '@sheet/reader';
 import { row } from '@sheet/row';
 import { parseXmlEvents } from '@xml/parser';
+import { describe, test, expect, afterEach } from '@tests/framework';
+import { cleanupTestFiles } from '@tests/helpers';
 import { readXlsx } from './reader';
+import { readFile, writeFile } from '../adapters';
 import { writeXlsx } from './writer';
 
 describe('XLSXReader', () => {
   const testFile = 'test-read.xlsx';
 
   afterEach(async () => {
-    if (await Bun.file(testFile).exists()) {
-      await import('fs').then((fs) => fs.promises.unlink(testFile));
-    }
+    await cleanupTestFiles(testFile);
   });
 
   test('should read single sheet workbook', async () => {
@@ -718,8 +718,7 @@ describe('XLSXReader', () => {
     const { readZipEntry } = await import('@zip/reader');
     const { stringToBytes, bytesToString } = await import('../adapters/common');
 
-    const file = Bun.file(testFile);
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = await readFile(testFile);
     const originalZip = await openZip(buffer);
 
     // Find and read the original shared strings file
@@ -755,7 +754,7 @@ describe('XLSXReader', () => {
     // Add shared strings with capital case filename
     await writeZipEntry(newZip, 'xl/SharedStrings.xml', stringToBytes(content));
     const newBuffer = await endZipWriter(newZip);
-    await Bun.write(testFile, newBuffer);
+    await writeFile(testFile, newBuffer);
 
     const workbook = await readXlsx(testFile);
     const sheet = workbook.sheet('Data');
@@ -876,7 +875,7 @@ describe('XLSXReader', () => {
     await writeZipEntry(zip, 'xl/worksheets/sheet1.xml', stringToBytes(sheetXml));
 
     const buffer = await endZipWriter(zip);
-    await Bun.write(testFile, buffer);
+    await writeFile(testFile, buffer);
 
     // Read the file using readXlsx
     const workbook = await readXlsx(testFile);
@@ -940,7 +939,7 @@ describe('XLSXReader', () => {
     await writeZipEntry(zip, 'xl/worksheets/sheet1.xml', stringToBytes(sheetXml));
 
     const buffer = await endZipWriter(zip);
-    await Bun.write(testFile, buffer);
+    await writeFile(testFile, buffer);
 
     // Read without explicit use1904Dates option - should auto-detect
     const workbook = await readXlsx(testFile);
@@ -995,7 +994,7 @@ describe('XLSXReader', () => {
     await writeZipEntry(zip, 'xl/worksheets/sheet1.xml', stringToBytes(sheetXml));
 
     const buffer = await endZipWriter(zip);
-    await Bun.write(testFile, buffer);
+    await writeFile(testFile, buffer);
 
     // Read without explicit use1904Dates option - should auto-detect
     const workbook = await readXlsx(testFile);
@@ -1050,7 +1049,7 @@ describe('XLSXReader', () => {
     await writeZipEntry(zip, 'xl/worksheets/sheet1.xml', stringToBytes(sheetXml));
 
     const buffer = await endZipWriter(zip);
-    await Bun.write(testFile, buffer);
+    await writeFile(testFile, buffer);
 
     // Read without explicit use1904Dates option - should auto-detect from string "true"
     const workbook = await readXlsx(testFile);
@@ -1103,7 +1102,7 @@ describe('XLSXReader', () => {
     await writeZipEntry(zip, 'xl/worksheets/sheet1.xml', stringToBytes(sheetXml));
 
     const buffer = await endZipWriter(zip);
-    await Bun.write(testFile, buffer);
+    await writeFile(testFile, buffer);
 
     // Read with explicit use1904Dates: false - should override detected 1904 system
     const workbook = await readXlsx(testFile, { use1904Dates: false });
@@ -1149,7 +1148,7 @@ describe('XLSXReader', () => {
     await writeZipEntry(zip, 'xl/worksheets/sheet1.xml', stringToBytes(sheetXml));
 
     const buffer = await endZipWriter(zip);
-    await Bun.write(testFile, buffer);
+    await writeFile(testFile, buffer);
 
     // Read without explicit use1904Dates option - should default to 1900
     const workbook = await readXlsx(testFile);

@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from '@tests/framework';
 import { parseXmlEvents } from './parser';
 import type { XmlEvent } from '../types';
 

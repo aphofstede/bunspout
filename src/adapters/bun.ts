@@ -81,3 +81,19 @@ export async function readFile(filePath: string): Promise<Buffer> {
   const arrayBuffer = await file.arrayBuffer();
   return Buffer.from(arrayBuffer);
 }
+
+/**
+ * Checks if a file exists (Bun implementation)
+ */
+export async function fileExists(filePath: string): Promise<boolean> {
+  const file = Bun.file(filePath);
+  return await file.exists();
+}
+
+/**
+ * Deletes a file (Bun implementation)
+ */
+export async function deleteFile(filePath: string): Promise<void> {
+  const file = Bun.file(filePath);
+  await file.unlink();
+}

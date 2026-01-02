@@ -1,6 +1,6 @@
 // noinspection HtmlDeprecatedTag,XmlDeprecatedElement
 // noinspection XmlDeprecatedElement
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from '@tests/framework';
 import { StyleRegistry } from './styles';
 import type { Style } from '../types';
 

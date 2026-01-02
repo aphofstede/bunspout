@@ -27,7 +27,8 @@ bun run lint:fix    # Auto-fix linting issues
 
 ### Development Workflow
 - **Runtime**: Use Bun instead of Node.js, npm, pnpm, or vite
-- **Testing**: `bun test` for unit tests, colocated with source files.
+- **Testing**: `bun test` for unit tests, colocated with source files
+- **Cross-Platform Testing**: Tests work in both Bun and Node.js via runtime-agnostic framework
 - **Benchmarks**: `bun bench` runs Tinybench performance tests
 - **Linting**: Run before commits, auto-fix with `--fix`
 
@@ -57,12 +58,77 @@ bun run lint:fix    # Auto-fix linting issues
 - Find test: `find . -name "*.test.ts" -exec grep -l "describe.*TestName" {} \;`
 - Find benchmark: `find . -name "*.bench.ts" -exec grep -l "bench.*Name" {} \;`
 
+## Cross-Platform Testing
+
+### Runtime-Agnostic Test Framework
+Tests use `@tests/framework` which automatically detects and uses the appropriate test runner:
+- **Bun**: Uses `bun:test` natively
+- **Node.js**: Uses `node:test` with compatibility layer
+
+### Test Imports
+```typescript
+// ✅ Correct: Runtime-agnostic
+import { describe, test, expect, afterEach } from '@tests/framework';
+
+// ❌ Incorrect: Bun-specific
+import { describe, test, expect } from 'bun:test';
+```
+
+### File Operations in Tests
+Use adapters for runtime-agnostic file operations:
+```typescript
+import { readFile, fileExists, deleteFile } from '../adapters';
+import { cleanupTestFiles } from '@tests/helpers';
+
+// Read file
+const buffer = await readFile(path);
+
+// Check existence
+const exists = await fileExists(path);
+
+// Cleanup in afterEach
+afterEach(async () => {
+  await cleanupTestFiles(testFile);
+});
+```
+
+### Running Tests
+
+**Local (Bun):**
+```bash
+bun test                    # All tests
+bun test src/xlsx/*.test.ts # Specific file
+```
+
+**Local (Node.js):**
+```bash
+npm run test:node           # All tests
+```
+
+**Docker (Cross-Platform):**
+```bash
+npm run docker:build        # Build containers (one-time)
+npm run docker:test:all     # Test both runtimes
+npm run docker:test:bun     # Test Bun only
+npm run docker:test:node    # Test Node.js only
+npm run docker:shell:bun    # Interactive shell (Bun)
+npm run docker:shell:node   # Interactive shell (Node.js)
+```
+
+### Docker Quick Reference
+- **Build**: `npm run docker:build` or `docker compose build`
+- **Test both**: `npm run docker:test:all`
+- **Test specific**: `npm run docker:test:bun` or `npm run docker:test:node`
+- **Interactive shell**: `npm run docker:shell:bun` or `npm run docker:shell:node`
+
 ## Definition of Done
 Before merging a PR:
 - ✅ `bun test` passes all tests
+- ✅ `npm run test:node` passes all tests (or `npm run docker:test:all` via Docker)
 - ✅ `bun run lint` passes with no errors
 - ✅ `bun bench` runs without failures (if performance changes)
 - ✅ TypeScript compiles without errors
 - ✅ New features have corresponding tests
+- ✅ Tests use runtime-agnostic framework (`@tests/framework`)
 - ✅ Breaking changes documented in PR description
 

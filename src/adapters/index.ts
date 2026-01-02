@@ -35,5 +35,35 @@ export async function readFile(filePath: string): Promise<Buffer> {
   }
 }
 
+/**
+ * Checks if a file exists using the appropriate runtime adapter
+ */
+export async function fileExists(filePath: string): Promise<boolean> {
+  if (isBun) {
+    const { fileExists } = await import('./bun');
+    return fileExists(filePath);
+  } else if (isNode) {
+    const { fileExists } = await import('./node');
+    return fileExists(filePath);
+  } else {
+    throw new Error('Unsupported runtime. This library requires Bun or Node.js.');
+  }
+}
+
+/**
+ * Deletes a file using the appropriate runtime adapter
+ */
+export async function deleteFile(filePath: string): Promise<void> {
+  if (isBun) {
+    const { deleteFile } = await import('./bun');
+    return deleteFile(filePath);
+  } else if (isNode) {
+    const { deleteFile } = await import('./node');
+    return deleteFile(filePath);
+  } else {
+    throw new Error('Unsupported runtime. This library requires Bun or Node.js.');
+  }
+}
+
 // Re-export common utilities
 export * from './common';

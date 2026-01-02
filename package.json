@@ -38,6 +38,7 @@
     "test": "bun test",
     "test:node": "node --import tsx/esm --test src/tests/integration/read-write.node.test.ts",
     "typecheck": "tsc --noEmit"
+    "test:node": "node --import tsx/esm --test 'src/**/*.test.ts'",
   },
   "dependencies": {
     "buffer-crc32": "^1.0.0",
@@ -63,7 +64,9 @@
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-unused-imports": "^4.1.4",
     "tinybench": "^2.7.0",
-    "typescript-eslint": "^8.0.0"
+    "tsx": "^4.19.2",
+    "typescript-eslint": "^8.0.0",
+    "expect": "^29.7.0"
   },
   "peerDependencies": {
     "typescript": "^5"
