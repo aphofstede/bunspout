@@ -91,8 +91,14 @@ export function serializeCell(
   // Only emit s attribute when a style is present (Excel defaults to style 0 automatically)
   let styleAttr = '';
   if (cell.style && getStyleIndex) {
-    const cellXfsIndex = getStyleIndex(cell.style);
-    styleAttr = ` s="${cellXfsIndex}"`;
+    try {
+      const cellXfsIndex = getStyleIndex(cell.style);
+      styleAttr = ` s="${cellXfsIndex}"`;
+    } catch (error) {
+      // Provide context about which cell failed (cellRef already computed above)
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to get style index for cell ${cellRef}: ${errorMessage}`);
+    }
   }
 
   const refAttr = ` r="${cellRef}"`;
@@ -432,6 +438,7 @@ export async function* writeSheetXml(
     const resolvedHeight = resolveRowHeight(rowIndex, row.height, rowHeights);
     yield serializeRow(row, {
       getStringIndex,
+      getStyleIndex,
       widthTracker,
       rowHeight: resolvedHeight,
       rowIndex,

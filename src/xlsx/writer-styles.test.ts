@@ -377,4 +377,50 @@ describe('XLSXWriter - Styles', () => {
       }
     });
   });
+
+  describe('Styles with Column Width Tracking', () => {
+    test('should apply styles when column width auto-detection is enabled', async () => {
+      await writeXlsx(testFile, {
+        sheets: [{
+          name: 'Styled',
+          autoDetectColumnWidth: true, // This triggers the slow path
+          rows: (async function* () {
+            yield row([
+              { ...cell('Bold Text'), style: { font: { bold: true } } },
+              { ...cell('Italic Text'), style: { font: { italic: true } } },
+            ]);
+            yield row([
+              { ...cell('Red Text'), style: { font: { fontColor: 'FFFF0000' } } },
+              { ...cell('Big Text'), style: { font: { fontSize: 18 } } },
+            ]);
+          })(),
+        }],
+      });
+
+      // Verify styles.xml exists
+      const zipFile = await openZip(Buffer.from(await Bun.file(testFile).arrayBuffer()));
+      const stylesEntry = zipFile.entries.find(e => e.fileName === 'xl/styles.xml');
+      expect(stylesEntry).toBeDefined();
+
+      // Verify sheet XML contains cells with style attributes
+      const sheetEntry = zipFile.entries.find(e => e.fileName === 'xl/worksheets/sheet1.xml');
+      expect(sheetEntry).toBeDefined();
+
+      if (sheetEntry) {
+        const xmlBytes: Uint8Array[] = [];
+        for await (const chunk of readZipEntry(sheetEntry, zipFile.zipFile)) {
+          xmlBytes.push(chunk);
+        }
+        const xml = await bytesToString(async function* () {
+          for (const chunk of xmlBytes) yield chunk;
+        }());
+
+        // Should have cells with style attributes (s="...")
+        expect(xml).toMatch(/<c r="A1" s="\d+"/);
+        expect(xml).toMatch(/<c r="B1" s="\d+"/);
+        expect(xml).toMatch(/<c r="A2" s="\d+"/);
+        expect(xml).toMatch(/<c r="B2" s="\d+"/);
+      }
+    });
+  });
 });

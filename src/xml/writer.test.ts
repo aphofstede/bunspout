@@ -106,6 +106,19 @@ describe('XML Writer', () => {
       expect(result).not.toContain('s="');
       expect(result).toContain('r="A1"');
     });
+
+    test('should throw with cell context when getStyleIndex throws', () => {
+      const cell: Cell = {
+        value: 'Test',
+        type: 'string',
+        style: { font: { bold: true } },
+      };
+      const throwingGetStyleIndex = () => {
+        throw new Error('Style validation failed');
+      };
+      expect(() => serializeCell(cell, 5, 2, undefined, throwingGetStyleIndex)).toThrow('Failed to get style index for cell C5');
+      expect(() => serializeCell(cell, 5, 2, undefined, throwingGetStyleIndex)).toThrow('Style validation failed');
+    });
   });
 
   describe('serializeRow', () => {
