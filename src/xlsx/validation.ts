@@ -14,7 +14,7 @@ export const sheetNameSchema = z.string()
   .min(1, 'Sheet name cannot be empty')
   .max(31, 'Sheet name cannot exceed 31 characters')
   .refine(
-    (name) => !/[:\/\\?*\[\]]/.test(name),
+    (name) => !/[:/\\?*[\]]/.test(name),
     'Sheet name cannot contain :, /, \\, ?, *, [, or ]',
   )
   .refine(
@@ -33,7 +33,7 @@ export const customPropertiesSchema = z.record(
     .min(1, 'Property name cannot be empty')
     .max(255, 'Property name cannot exceed 255 characters')
     .refine(
-      (name) => !/[<>:"\/\\|?*]/.test(name),
+      (name) => !/[<>:"/\\|?*]/.test(name),
       'Property name contains invalid characters',
     ),
   z.string().max(32767, 'Property value cannot exceed 32767 characters'), // Excel cell limit
