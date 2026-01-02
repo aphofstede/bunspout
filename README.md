@@ -1,26 +1,23 @@
 # Bunspout
 
-Welcome to the Bunspout repository! This project is aimed to revolutionize the widget handling systems. Check below for more insights and guidelines.
+Welcome to Bunspout, a cutting edge project for XYZ.
 
-## Features
-- Ultra-fast widget processing 
-- Error handling and logging capability
-- Customizable and modular design
+## Description
+This repository aims to provide all you need to deploy and manage XYZ on Bun.
 
 ## Installation
-```sh
-npm install bunspout
+Quickstart installation guide:
+```bash
+git clone https://github.com/bunspout/bunspout.git
+cd bunspout
+make install
 ```
 
 ## Usage
-```javascript
-const Bunspout = require('bunspout');
-const instance = new Bunspout();
-instance.processWidgets();
+Run the following command to get started:
+```bash
+bunspout --start
 ```
 
-## Contributing
-Please take a look at our [contribution guidelines](./CONTRIBUTING.md) before starting any work.
-
-## License
-This project is licensed under the MIT License.
+### Contributing
+Feel free to fork this repository and submit pull requests.
