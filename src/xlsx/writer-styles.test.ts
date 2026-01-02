@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// noinspection HtmlDeprecatedTag,XmlDeprecatedElement
+// noinspection XmlDeprecatedElement
 import { describe, test, expect, afterEach } from 'bun:test';
 import { cell } from '@sheet/cell';
 import { row } from '@sheet/row';

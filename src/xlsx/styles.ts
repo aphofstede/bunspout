@@ -1,3 +1,5 @@
+// noinspection HtmlDeprecatedTag,XmlDeprecatedElement
+
 /*
  * Style registry and styles.xml generator
  */
@@ -36,7 +38,6 @@ function normalizeFontStyle(font?: FontStyle): Required<FontStyle> {
     return DEFAULT_FONT;
   }
 
-  // Validate font style
   const validated = fontStyleSchema.parse(font);
 
   return {
@@ -77,7 +78,6 @@ interface NormalizedStyle {
  * This prevents accidental mutations of stored styles
  */
 function deepFreeze<T>(obj: T): Readonly<T> {
-  // Get all property names
   const propNames = Object.getOwnPropertyNames(obj);
 
   // Freeze properties before freezing self
@@ -94,7 +94,7 @@ function deepFreeze<T>(obj: T): Readonly<T> {
 
 /**
  * Style registry that tracks and deduplicates styles.
- * Styles are automatically deduplicated based on their font properties and deep-frozen to prevent mutations.
+ * Styles are deep-frozen to prevent mutations.
  * The registry generates the styles.xml content for XLSX files.
  */
 export class StyleRegistry {
@@ -109,7 +109,6 @@ export class StyleRegistry {
    * @throws {z.ZodError} If style validation fails
    */
   addStyle(style: Style): number {
-    // Normalize the style
     const normalized: NormalizedStyle = {
       font: normalizeFontStyle(style.font),
     };
@@ -167,7 +166,6 @@ export class StyleRegistry {
 
   /**
    * Gets the count of unique styles registered
-   * @returns Number of unique styles
    */
   getCount(): number {
     return this.styles.length;

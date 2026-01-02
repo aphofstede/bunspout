@@ -1,3 +1,5 @@
+// noinspection HtmlUnknownAttribute,HtmlDeprecatedAttribute
+// noinspection HtmlUnknownAttribute
 import type { ColumnWidthDefinition, SheetColumnWidthOptions, RowHeightDefinition } from '@xlsx/types';
 import { getCellReference } from '@utils/cell-reference';
 import { ColumnWidthTracker } from '@utils/column-widths';

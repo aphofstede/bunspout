@@ -170,6 +170,7 @@ describe('XML Writer', () => {
 
   describe('writeSheetXml', () => {
     test('should write empty sheet', async () => {
+      // noinspection JSMismatchedCollectionQueryUpdate -- Never written to as part of this test
       const rows: Row[] = [];
       const chunks: string[] = [];
       for await (const chunk of writeSheetXml(async function* () {
