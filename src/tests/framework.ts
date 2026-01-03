@@ -97,8 +97,9 @@ export const fit = isBun && bunTest
     : test; // Fallback if .only is not available
 export const xit = isBun && bunTest
   ? bunTest.test.skip
-  : ((name: string, fn: () => void | Promise<void> = () => {}) => {
+  : ((name: string, fn: () => void | Promise<void> = () => {}): void => {
     if (nodeTest?.test.skip) {
       nodeTest.test.skip(name, fn);
     }
+    // If skip is not available, the test is effectively skipped by not being registered
   });
