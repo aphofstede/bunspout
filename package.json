@@ -36,7 +36,7 @@
     "lint": "bun run typecheck && eslint .",
     "lint:fix": "eslint . --fix",
     "test": "bun test",
-    "test:node": "node --import tsx/esm --test 'src/**/*.test.ts'",
+    "test:node": "find src -name '*.test.ts' | xargs node --import tsx/esm --test",
     "typecheck": "tsc --noEmit",
     "docker:build": "docker compose build",
     "docker:test:bun": "docker compose run --rm bun bun test",
