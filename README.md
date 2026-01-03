@@ -14,14 +14,18 @@ A fast, streaming Excel read/write library for XLSX files. Built with Bun runtim
 - 🧩 **Modular design** - Clean separation between XLSX, XML, ZIP, and sheet layers
 
 Traditional XLSX writers often load the entire dataset into memory before writing. Bunspout uses AsyncIterable streams to process rows one by one, which allows:
-•	Low memory footprint
-•	Efficient handling of millions of rows
-•	Better performance in Bun/Node
+- Low memory footprint
+- Efficient handling of millions of rows
+- Better performance in Bun/Node
 
 ## Installation
 
 ```bash
-bun install
+# Using Bun
+bun add bunspout
+
+# Using npm
+npm install bunspout
 ```
 
 ## Usage
