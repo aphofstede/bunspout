@@ -1,17 +1,17 @@
-import { describe, test, expect, afterEach } from 'bun:test';
 import { cell } from '@sheet/cell';
 import { row } from '@sheet/row';
 import { readZipEntry } from '@zip/reader';
+import { describe, test, expect, afterEach } from '@tests/framework';
+import { cleanupTestFiles } from '@tests/helpers';
 import { writeXlsx } from './writer';
-import { bytesToString } from '../adapters/common';
+import { readFile } from '../adapters';
+import { bytesToString } from '../adapters';
 
 describe('Column Widths', () => {
   const testFile = 'test-column-widths.xlsx';
 
   afterEach(async () => {
-    if (await Bun.file(testFile).exists()) {
-      await import('fs').then((fs) => fs.promises.unlink(testFile));
-    }
+    await cleanupTestFiles(testFile);
   });
 
   test('should set default column width in sheetFormatPr', async () => {
@@ -28,8 +28,7 @@ describe('Column Widths', () => {
     });
 
     const { openZip } = await import('@zip/reader');
-    const file = Bun.file(testFile);
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = await readFile(testFile);
     const zipFile = await openZip(buffer);
     const sheetEntry = zipFile.entries.find((e) => e.fileName === 'xl/worksheets/sheet1.xml');
     expect(sheetEntry).toBeDefined();
@@ -64,8 +63,7 @@ describe('Column Widths', () => {
     });
 
     const { openZip } = await import('@zip/reader');
-    const file = Bun.file(testFile);
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = await readFile(testFile);
     const zipFile = await openZip(buffer);
     const sheetEntry = zipFile.entries.find((e) => e.fileName === 'xl/worksheets/sheet1.xml');
     expect(sheetEntry).toBeDefined();
@@ -100,8 +98,7 @@ describe('Column Widths', () => {
     });
 
     const { openZip } = await import('@zip/reader');
-    const file = Bun.file(testFile);
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = await readFile(testFile);
     const zipFile = await openZip(buffer);
     const sheetEntry = zipFile.entries.find((e) => e.fileName === 'xl/worksheets/sheet1.xml');
     expect(sheetEntry).toBeDefined();
@@ -133,8 +130,7 @@ describe('Column Widths', () => {
     });
 
     const { openZip } = await import('@zip/reader');
-    const file = Bun.file(testFile);
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = await readFile(testFile);
     const zipFile = await openZip(buffer);
     const sheetEntry = zipFile.entries.find((e) => e.fileName === 'xl/worksheets/sheet1.xml');
     expect(sheetEntry).toBeDefined();
@@ -176,8 +172,7 @@ describe('Column Widths', () => {
     });
 
     const { openZip } = await import('@zip/reader');
-    const file = Bun.file(testFile);
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = await readFile(testFile);
     const zipFile = await openZip(buffer);
     const sheetEntry = zipFile.entries.find((e) => e.fileName === 'xl/worksheets/sheet1.xml');
     expect(sheetEntry).toBeDefined();
@@ -215,8 +210,7 @@ describe('Column Widths', () => {
     });
 
     const { openZip } = await import('@zip/reader');
-    const file = Bun.file(testFile);
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = await readFile(testFile);
     const zipFile = await openZip(buffer);
     const sheetEntry = zipFile.entries.find((e) => e.fileName === 'xl/worksheets/sheet1.xml');
     expect(sheetEntry).toBeDefined();
@@ -254,8 +248,7 @@ describe('Column Widths', () => {
     });
 
     const { openZip } = await import('@zip/reader');
-    const file = Bun.file(testFile);
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = await readFile(testFile);
     const zipFile = await openZip(buffer);
     const sheetEntry = zipFile.entries.find((e) => e.fileName === 'xl/worksheets/sheet1.xml');
     expect(sheetEntry).toBeDefined();

@@ -1,6 +1,8 @@
-import { describe, test, expect, afterEach } from 'bun:test';
 import { cell } from '@sheet/cell';
 import { row } from '@sheet/row';
+import { describe, test, expect, afterEach } from '@tests/framework';
+import { cleanupTestFiles } from '@tests/helpers';
+import { readFile } from '../adapters';
 import { generateCoreProperties, generateCustomProperties } from './structure';
 import { writeXlsx } from './writer';
 
@@ -8,9 +10,7 @@ describe('Document Properties', () => {
   const testFile = 'test-properties.xlsx';
 
   afterEach(async () => {
-    if (await Bun.file(testFile).exists()) {
-      await import('fs').then((fs) => fs.promises.unlink(testFile));
-    }
+    await cleanupTestFiles(testFile);
   });
 
   describe('generateCoreProperties', () => {
@@ -141,12 +141,9 @@ describe('Document Properties', () => {
         },
       });
 
-      const file = Bun.file(testFile);
-      expect(await file.exists()).toBe(true);
-
       // Verify core.xml exists in ZIP
       const { openZip } = await import('../zip/reader');
-      const buffer = Buffer.from(await file.arrayBuffer());
+      const buffer = await readFile(testFile);
       const zipFile = await openZip(buffer);
       const fileNames = zipFile.entries.map((e) => e.fileName);
 
@@ -178,8 +175,8 @@ describe('Document Properties', () => {
       // Read and verify core.xml content
       const { openZip, readZipEntry } = await import('../zip/reader');
       const { bytesToString } = await import('../adapters/common');
-      const file = Bun.file(testFile);
-      const buffer = Buffer.from(await file.arrayBuffer());
+
+      const buffer = await readFile(testFile);
       const zipFile = await openZip(buffer);
       const coreEntry = zipFile.entries.find((e) => e.fileName === 'docProps/core.xml');
       expect(coreEntry).toBeDefined();
@@ -217,8 +214,8 @@ describe('Document Properties', () => {
       });
 
       const { openZip } = await import('../zip/reader');
-      const file = Bun.file(testFile);
-      const buffer = Buffer.from(await file.arrayBuffer());
+
+      const buffer = await readFile(testFile);
       const zipFile = await openZip(buffer);
       const fileNames = zipFile.entries.map((e) => e.fileName);
 
@@ -246,8 +243,8 @@ describe('Document Properties', () => {
       );
 
       const { openZip } = await import('../zip/reader');
-      const file = Bun.file(testFile);
-      const buffer = Buffer.from(await file.arrayBuffer());
+
+      const buffer = await readFile(testFile);
       const zipFile = await openZip(buffer);
       const fileNames = zipFile.entries.map((e) => e.fileName);
 
@@ -274,8 +271,8 @@ describe('Document Properties', () => {
       // Verify _rels/.rels includes core properties relationship
       const { openZip, readZipEntry } = await import('../zip/reader');
       const { bytesToString } = await import('../adapters/common');
-      const file = Bun.file(testFile);
-      const buffer = Buffer.from(await file.arrayBuffer());
+
+      const buffer = await readFile(testFile);
       const zipFile = await openZip(buffer);
       const relsEntry = zipFile.entries.find((e) => e.fileName === '_rels/.rels');
       expect(relsEntry).toBeDefined();
@@ -316,8 +313,8 @@ describe('Document Properties', () => {
       // Verify custom.xml exists in ZIP
       const { openZip, readZipEntry } = await import('../zip/reader');
       const { bytesToString } = await import('../adapters/common');
-      const file = Bun.file(testFile);
-      const buffer = Buffer.from(await file.arrayBuffer());
+
+      const buffer = await readFile(testFile);
       const zipFile = await openZip(buffer);
       const fileNames = zipFile.entries.map((e) => e.fileName);
 
@@ -366,8 +363,8 @@ describe('Document Properties', () => {
       // Verify _rels/.rels includes custom properties relationship
       const { openZip, readZipEntry } = await import('../zip/reader');
       const { bytesToString } = await import('../adapters/common');
-      const file = Bun.file(testFile);
-      const buffer = Buffer.from(await file.arrayBuffer());
+
+      const buffer = await readFile(testFile);
       const zipFile = await openZip(buffer);
       const relsEntry = zipFile.entries.find((e) => e.fileName === '_rels/.rels');
       expect(relsEntry).toBeDefined();
@@ -403,8 +400,8 @@ describe('Document Properties', () => {
       });
 
       const { openZip } = await import('../zip/reader');
-      const file = Bun.file(testFile);
-      const buffer = Buffer.from(await file.arrayBuffer());
+
+      const buffer = await readFile(testFile);
       const zipFile = await openZip(buffer);
       const fileNames = zipFile.entries.map((e) => e.fileName);
 
@@ -431,8 +428,8 @@ describe('Document Properties', () => {
       });
 
       const { openZip } = await import('../zip/reader');
-      const file = Bun.file(testFile);
-      const buffer = Buffer.from(await file.arrayBuffer());
+
+      const buffer = await readFile(testFile);
       const zipFile = await openZip(buffer);
       const fileNames = zipFile.entries.map((e) => e.fileName);
 

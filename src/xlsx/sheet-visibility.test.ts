@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, test, expect, afterEach } from 'bun:test';
 import { cell } from '@sheet/cell';
 import { row } from '@sheet/row';
+import { describe, test, expect, afterEach } from '@tests/framework';
+import { cleanupTestFiles } from '@tests/helpers';
 import { readXlsx } from './reader';
 import { generateWorkbook } from './structure';
 import { writeXlsx } from './writer';
+import { readFile, fileExists } from '../adapters';
 
 describe('Sheet Visibility', () => {
   const testFile = 'test-visibility.xlsx';
 
   afterEach(async () => {
-    if (await Bun.file(testFile).exists()) {
-      await import('fs').then((fs) => fs.promises.unlink(testFile));
-    }
+    await cleanupTestFiles(testFile);
   });
 
   describe('generateWorkbook', () => {
@@ -80,13 +80,12 @@ describe('Sheet Visibility', () => {
         ],
       });
 
-      const file = Bun.file(testFile);
-      expect(await file.exists()).toBe(true);
+      expect(await fileExists(testFile)).toBe(true);
 
       // Verify workbook.xml contains hidden state
       const { openZip, readZipEntry } = await import('../zip/reader');
       const { bytesToString } = await import('../adapters/common');
-      const buffer = Buffer.from(await file.arrayBuffer());
+      const buffer = await readFile(testFile);
       const zipFile = await openZip(buffer);
       const workbookEntry = zipFile.entries.find((e) => e.fileName === 'xl/workbook.xml');
       expect(workbookEntry).toBeDefined();
@@ -144,8 +143,7 @@ describe('Sheet Visibility', () => {
       // Verify workbook.xml
       const { openZip, readZipEntry } = await import('../zip/reader');
       const { bytesToString } = await import('../adapters/common');
-      const file = Bun.file(testFile);
-      const buffer = Buffer.from(await file.arrayBuffer());
+      const buffer = await readFile(testFile);
       const zipFile = await openZip(buffer);
       const workbookEntry = zipFile.entries.find((e) => e.fileName === 'xl/workbook.xml');
       expect(workbookEntry).toBeDefined();

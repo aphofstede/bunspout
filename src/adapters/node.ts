@@ -68,3 +68,24 @@ export async function readFile(filePath: string): Promise<Buffer> {
   const buffer = await fsReadFile(filePath);
   return Buffer.from(buffer);
 }
+
+/**
+ * Checks if a file exists (Node.js implementation)
+ */
+export async function fileExists(filePath: string): Promise<boolean> {
+  const { access } = await import('fs/promises');
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Deletes a file (Node.js implementation)
+ */
+export async function deleteFile(filePath: string): Promise<void> {
+  const { unlink } = await import('fs/promises');
+  await unlink(filePath);
+}

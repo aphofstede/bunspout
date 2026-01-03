@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, test, expect } from 'bun:test';
 import { parseXmlEvents } from '@xml/parser';
+import { describe, test, expect } from '@tests/framework';
 import { parseSheet } from './reader';
 import type { Row } from '../types';
 

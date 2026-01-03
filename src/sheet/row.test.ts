@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from '@tests/framework';
 import { cell } from './cell';
 import { row } from './row';
 

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from '@tests/framework';
 import { sheetNameSchema, workbookPropertiesSchema, customPropertiesSchema } from './validation';
 
 describe('Validation Schemas', () => {

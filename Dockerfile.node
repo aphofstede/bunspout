@@ -1,0 +1,18 @@
+# Node.js test container
+FROM node:20-slim
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json ./
+
+# Install dependencies (tsx is now in devDependencies)
+# Note: Using npm install instead of npm ci since we use bun.lock, not package-lock.json
+RUN npm install --ignore-scripts
+
+# Copy source code into image (base layer)
+# Note: docker-compose volume mounts overlay this for hot-reload during development
+COPY . .
+
+# Default command runs Node.js tests
+CMD ["npm", "run", "test:node"]

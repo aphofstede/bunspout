@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+bun.lockb
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Test outputs and temp files
+*.xlsx
+*.zip
+coverage/
+.nyc_output/
+
+# Environment and config
+.env
+.env.*
+!.env.example
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation (we want to keep some, but exclude large ones)
+*.log
+*.backup
+
+# CI/CD
+.github/
+
+# Docker files themselves
+Dockerfile*
+docker-compose*.yml
+.dockerignore

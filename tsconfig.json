@@ -21,7 +21,8 @@
       "@sheet/*": ["sheet/*"],
       "@utils/*": ["utils/*"],
       "@zip/*": ["zip/*"],
-      "@xml/*": ["xml/*"]
+      "@xml/*": ["xml/*"],
+      "@tests/*": ["tests/*"]
     },
 
     // Best practices

@@ -1,4 +1,4 @@
-/**
+/*
  * Bunspout - Fast, streaming Excel read/write library
  */
 

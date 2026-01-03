@@ -51,7 +51,7 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
-      - name: Run Node.js integration tests
+      - name: Run Node.js tests
         run: npm run test:node
 
       - name: Verify package can be imported

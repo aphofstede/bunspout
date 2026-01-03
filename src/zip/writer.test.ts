@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from '@tests/framework';
 import { writeZipEntry, createZipWriter, endZipWriter } from './writer';
 
 describe('ZIP Writer', () => {

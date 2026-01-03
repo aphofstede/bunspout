@@ -1,21 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // noinspection HtmlDeprecatedTag,XmlDeprecatedElement
 // noinspection XmlDeprecatedElement
-import { describe, test, expect, afterEach } from 'bun:test';
 import { cell } from '@sheet/cell';
 import { row } from '@sheet/row';
 import { openZip, readZipEntry } from '@zip/reader';
+import { describe, test, expect, afterEach } from '@tests/framework';
+import { cleanupTestFiles } from '@tests/helpers';
 import { readXlsx } from './reader';
 import { writeXlsx } from './writer';
-import { bytesToString } from '../adapters';
+import { bytesToString, readFile } from '../adapters';
 
 describe('XLSXWriter - Styles', () => {
   const testFile = 'test-styles-output.xlsx';
 
   afterEach(async () => {
-    if (await Bun.file(testFile).exists()) {
-      await import('fs').then((fs) => fs.promises.unlink(testFile));
-    }
+    await cleanupTestFiles(testFile);
   });
 
   describe('Font Styles', () => {
@@ -30,7 +29,8 @@ describe('XLSXWriter - Styles', () => {
       });
 
       // Verify styles.xml exists
-      const zipFile = await openZip(Buffer.from(await Bun.file(testFile).arrayBuffer()));
+      const buffer = await readFile(testFile);
+      const zipFile = await openZip(buffer);
       const stylesEntry = zipFile.entries.find(e => e.fileName === 'xl/styles.xml');
       expect(stylesEntry).toBeDefined();
 
@@ -57,7 +57,8 @@ describe('XLSXWriter - Styles', () => {
         }],
       });
 
-      const zipFile = await openZip(Buffer.from(await Bun.file(testFile).arrayBuffer()));
+      const buffer = await readFile(testFile);
+      const zipFile = await openZip(buffer);
       const stylesEntry = zipFile.entries.find(e => e.fileName === 'xl/styles.xml');
       expect(stylesEntry).toBeDefined();
 
@@ -84,7 +85,8 @@ describe('XLSXWriter - Styles', () => {
         }],
       });
 
-      const zipFile = await openZip(Buffer.from(await Bun.file(testFile).arrayBuffer()));
+      const buffer = await readFile(testFile);
+      const zipFile = await openZip(buffer);
       const stylesEntry = zipFile.entries.find(e => e.fileName === 'xl/styles.xml');
       expect(stylesEntry).toBeDefined();
 
@@ -111,7 +113,8 @@ describe('XLSXWriter - Styles', () => {
         }],
       });
 
-      const zipFile = await openZip(Buffer.from(await Bun.file(testFile).arrayBuffer()));
+      const buffer = await readFile(testFile);
+      const zipFile = await openZip(buffer);
       const stylesEntry = zipFile.entries.find(e => e.fileName === 'xl/styles.xml');
       expect(stylesEntry).toBeDefined();
 
@@ -138,7 +141,8 @@ describe('XLSXWriter - Styles', () => {
         }],
       });
 
-      const zipFile = await openZip(Buffer.from(await Bun.file(testFile).arrayBuffer()));
+      const buffer = await readFile(testFile);
+      const zipFile = await openZip(buffer);
       const stylesEntry = zipFile.entries.find(e => e.fileName === 'xl/styles.xml');
       expect(stylesEntry).toBeDefined();
 
@@ -165,7 +169,8 @@ describe('XLSXWriter - Styles', () => {
         }],
       });
 
-      const zipFile = await openZip(Buffer.from(await Bun.file(testFile).arrayBuffer()));
+      const buffer = await readFile(testFile);
+      const zipFile = await openZip(buffer);
       const stylesEntry = zipFile.entries.find(e => e.fileName === 'xl/styles.xml');
       expect(stylesEntry).toBeDefined();
 
@@ -192,7 +197,8 @@ describe('XLSXWriter - Styles', () => {
         }],
       });
 
-      const zipFile = await openZip(Buffer.from(await Bun.file(testFile).arrayBuffer()));
+      const buffer = await readFile(testFile);
+      const zipFile = await openZip(buffer);
       const stylesEntry = zipFile.entries.find(e => e.fileName === 'xl/styles.xml');
       expect(stylesEntry).toBeDefined();
 
@@ -229,7 +235,8 @@ describe('XLSXWriter - Styles', () => {
         }],
       });
 
-      const zipFile = await openZip(Buffer.from(await Bun.file(testFile).arrayBuffer()));
+      const buffer = await readFile(testFile);
+      const zipFile = await openZip(buffer);
       const stylesEntry = zipFile.entries.find(e => e.fileName === 'xl/styles.xml');
       expect(stylesEntry).toBeDefined();
 
@@ -264,7 +271,8 @@ describe('XLSXWriter - Styles', () => {
         }],
       });
 
-      const zipFile = await openZip(Buffer.from(await Bun.file(testFile).arrayBuffer()));
+      const buffer = await readFile(testFile);
+      const zipFile = await openZip(buffer);
       const stylesEntry = zipFile.entries.find(e => e.fileName === 'xl/styles.xml');
       expect(stylesEntry).toBeDefined();
 
@@ -296,7 +304,8 @@ describe('XLSXWriter - Styles', () => {
       });
 
       // Verify styles.xml contains the style
-      const zipFile = await openZip(Buffer.from(await Bun.file(testFile).arrayBuffer()));
+      const buffer = await readFile(testFile);
+      const zipFile = await openZip(buffer);
       const stylesEntry = zipFile.entries.find(e => e.fileName === 'xl/styles.xml');
       expect(stylesEntry).toBeDefined();
 
@@ -342,7 +351,8 @@ describe('XLSXWriter - Styles', () => {
         }],
       });
 
-      const zipFile = await openZip(Buffer.from(await Bun.file(testFile).arrayBuffer()));
+      const buffer = await readFile(testFile);
+      const zipFile = await openZip(buffer);
       const stylesEntry = zipFile.entries.find(e => e.fileName === 'xl/styles.xml');
       expect(stylesEntry).toBeUndefined();
     });
@@ -357,7 +367,8 @@ describe('XLSXWriter - Styles', () => {
         }],
       });
 
-      const zipFile = await openZip(Buffer.from(await Bun.file(testFile).arrayBuffer()));
+      const buffer = await readFile(testFile);
+      const zipFile = await openZip(buffer);
       const sheetEntry = zipFile.entries.find(e => e.fileName === 'xl/worksheets/sheet1.xml');
       expect(sheetEntry).toBeDefined();
 
@@ -398,7 +409,8 @@ describe('XLSXWriter - Styles', () => {
       });
 
       // Verify styles.xml exists
-      const zipFile = await openZip(Buffer.from(await Bun.file(testFile).arrayBuffer()));
+      const buffer = await readFile(testFile);
+      const zipFile = await openZip(buffer);
       const stylesEntry = zipFile.entries.find(e => e.fileName === 'xl/styles.xml');
       expect(stylesEntry).toBeDefined();
 

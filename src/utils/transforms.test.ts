@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from '@tests/framework';
 import { mapRows, filterRows, limitRows, collect } from './transforms';
 import type { Row } from '../types';
 

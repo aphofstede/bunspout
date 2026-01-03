@@ -1,5 +1,4 @@
-
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from '@tests/framework';
 import { writeSheetXml, serializeRow, serializeCell } from './writer';
 import type { Row, Cell } from '../types';
 

@@ -1,7 +1,7 @@
 import { rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach } from '@tests/framework';
 import { CachingStrategyFactory, IN_MEMORY_ENTRY_OVERHEAD_BYTES, MAX_NUM_STRINGS_PER_TEMP_FILE } from './factory';
 import { FileBasedStrategy } from './file-based-strategy';
 import { InMemoryStrategy } from './in-memory-strategy';

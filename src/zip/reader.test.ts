@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from '@tests/framework';
 import { readZipEntry, openZip } from './reader';
 import { createZipWriter, writeZipEntry, endZipWriter } from './writer';
 

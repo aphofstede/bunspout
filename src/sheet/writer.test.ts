@@ -1,5 +1,5 @@
-import { describe, test, expect } from 'bun:test';
 import { writeSheetXml } from '@xml/writer';
+import { describe, test, expect } from '@tests/framework';
 import type { Row } from '../types';
 
 describe('Row Writer Integration', () => {

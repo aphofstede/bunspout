@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, test, expect, afterEach } from 'bun:test';
+import { describe, test, expect, afterEach } from '@tests/framework';
+import { cleanupTestFiles } from '@tests/helpers';
 import { Workbook } from './workbook';
 
 describe('Workbook and Sheet Classes', () => {
@@ -7,11 +8,7 @@ describe('Workbook and Sheet Classes', () => {
 
   afterEach(async () => {
     // Cleanup test files
-    for (const testFile of testFiles) {
-      if (await Bun.file(testFile).exists()) {
-        await import('fs').then((fs) => fs.promises.unlink(testFile));
-      }
-    }
+    await cleanupTestFiles(...testFiles);
     testFiles.length = 0;
   });
 
