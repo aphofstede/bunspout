@@ -36,12 +36,3 @@ services:
     # Keep container running for interactive testing
     # Uncomment to run tests and exit:
     # command: npm run test:node
-
-  # Optional: Run both tests in parallel
-  test-all:
-    image: alpine:3.18
-    container_name: bunspout-test-orchestrator
-    depends_on:
-      - bun
-      - node
-    command: echo "Run 'docker-compose run bun' and 'docker-compose run node' to test"

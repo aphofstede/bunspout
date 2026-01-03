@@ -10,7 +10,8 @@ COPY package.json ./
 # Note: Using npm install instead of npm ci since we use bun.lock, not package-lock.json
 RUN npm install --ignore-scripts
 
-# Copy source code (using volume mount in docker-compose for hot-reload)
+# Copy source code into image (base layer)
+# Note: docker-compose volume mounts overlay this for hot-reload during development
 COPY . .
 
 # Default command runs Node.js tests

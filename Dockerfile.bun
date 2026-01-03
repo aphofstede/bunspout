@@ -7,9 +7,10 @@ WORKDIR /app
 COPY package.json bun.lock* ./
 
 # Install dependencies
-RUN bun install #--frozen-lockfile
+RUN bun install --frozen-lockfile
 
-# Copy source code (using volume mount in docker-compose for hot-reload)
+# Copy source code into image (base layer)
+# Note: docker-compose volume mounts overlay this for hot-reload during development
 COPY . .
 
 # Default command runs all tests
